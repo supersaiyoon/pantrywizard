@@ -1,3 +1,7 @@
+/* ====================
+   SETUP & CONFIGURATION
+   ==================== */
+
 import express, { response } from "express";
 import mysql from "mysql2/promise";
 
@@ -18,21 +22,26 @@ app.use(express.urlencoded({ extended: true }));
 //setting up database connection pool
 const pool = mysql.createPool(config);
 
-//routes
+/* ====================
+   ROUTES
+   ==================== */
+
 app.get("/", (req, res) => {
-  res.render("index");
+    res.render("index");
 });
 
-app.get("/dbTest", async(req, res) => {
-   try {
+// Test database connection
+app.get("/dbTest", async (req, res) => {
+    try {
         const [rows] = await pool.query("SELECT CURDATE()");
         res.send(rows);
-    } catch (err) {
+    }
+    catch (err) {
         console.error("Database error:", err);
         res.status(500).send("Database error");
     }
-});//dbTest
+});
 
 app.listen(port, () => {
-  console.log(`Example app listening on port http://localhost:${port}`);
+    console.log(`Example app listening on port http://localhost:${port}`);
 });
