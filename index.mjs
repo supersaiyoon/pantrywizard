@@ -16,6 +16,18 @@ import config from "./config.mjs";
 app.set("view engine", "ejs");
 app.use(express.static("public"));
 
+/* ====================
+   API CONFIGURATION
+   ==================== */
+
+// API keys
+const spoonacularApiKey = process.env.SPOONACULAR_API_KEY;
+const theMealDbApiKey = process.env.THEMEALDB_API_KEY;
+
+// API base URLs
+const findByIngredients = `https://api.spoonacular.com/recipes/findByIngredients?apiKey=${spoonacularApiKey}`;
+const theMealDbSearchBaseUrl = `https://www.themealdb.com/api/json/v1/${theMealDbApiKey}`;
+
 //for Express to get values using POST method
 app.use(express.urlencoded({ extended: true }));
 
