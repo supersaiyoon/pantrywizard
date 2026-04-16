@@ -1,14 +1,19 @@
-/* ====================
-   SETUP & CONFIGURATION
-   ==================== */
+// =====================
+//  IMPORTS
+// =====================
 
 import express, { response } from "express";
 import mysql from "mysql2/promise";
 
+
+// =====================
+// SETUP & CONFIGURATION
+// =====================
+
 const { query, body, validationResult } = await import("express-validator");
 const app = express();
 
-//for render
+// For render
 const port = process.env.PORT || 4000;
 import "dotenv/config";
 import config from "./config.mjs";
@@ -16,9 +21,10 @@ import config from "./config.mjs";
 app.set("view engine", "ejs");
 app.use(express.static("public"));
 
-/* ====================
-   API CONFIGURATION
-   ==================== */
+
+// =====================
+// API CONFIGURATION
+// =====================
 
 // API keys
 const spoonacularApiKey = process.env.SPOONACULAR_API_KEY;
@@ -34,9 +40,10 @@ app.use(express.urlencoded({ extended: true }));
 //setting up database connection pool
 const pool = mysql.createPool(config);
 
-/* ====================
-   ROUTES
-   ==================== */
+
+// =====================
+// ROUTES
+// =====================
 
 app.get("/", (req, res) => {
     res.render("index");
