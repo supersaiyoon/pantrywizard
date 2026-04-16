@@ -45,8 +45,21 @@ const pool = mysql.createPool(config);
 // ROUTES
 // =====================
 
+// Home page
 app.get("/", (req, res) => {
     res.render("index");
+});
+
+app.get("/about", (req, res) => {
+    res.render("about");
+});
+
+app.get("/favorites", (req, res) => {
+    res.render("favorites");
+});
+
+app.get("/search", (req, res) => {
+    res.render("search");
 });
 
 // Test database connection
