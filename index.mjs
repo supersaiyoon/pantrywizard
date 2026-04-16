@@ -62,6 +62,13 @@ app.get("/search", (req, res) => {
     res.render("search");
 });
 
+
+// =====================
+// API ENDPOINTS
+// =====================
+
+// TODO: Implement API endpoints for searching recipes
+
 // Test database connection
 app.get("/dbTest", async (req, res) => {
     try {
