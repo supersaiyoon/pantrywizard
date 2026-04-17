@@ -6,11 +6,60 @@
     <div class="body-div">
         <h1>Recipe Search</h1>
         <div class="search-container">
-            <input type="text" id="searchInput" placeholder="Enter ingredients like chicken, rice, garlic, etc.">
-            <input type="text" id="cuisineInput" placeholder="Cuisine, e.g. italian">
-            <input type="text" id="dietInput" placeholder="Diet, e.g. vegetarian">
-            <button id="searchButton">Search</button>
+            <input type="text"
+                   id="searchInput"
+                   placeholder="Enter ingredients like chicken, rice, etc.">
         </div>
+
+        <div class="filter-group">
+            <h3>Cuisine</h3>
+
+            <label>
+                <input type="checkbox" name="cuisine" value="italian">
+                Italian
+            </label>
+
+            <label>
+                <input type="checkbox" name="cuisine" value="mexican">
+                Mexican
+            </label>
+
+            <label>
+                <input type="checkbox" name="cuisine" value="chinese">
+                Chinese
+            </label>
+
+            <label>
+                <input type="checkbox" name="cuisine" value="indian">
+                Indian
+            </label>
+        </div>
+
+        <div class="filter-group">
+            <h3>Diet</h3>
+
+            <label>
+                <input type="checkbox" name="diet" value="vegetarian">
+                Vegetarian
+            </label>
+
+            <label>
+                <input type="checkbox" name="diet" value="vegan">
+                Vegan
+            </label>
+
+            <label>
+                <input type="checkbox" name="diet" value="gluten free">
+                Gluten Free
+            </label>
+
+            <label>
+                <input type="checkbox" name="diet" value="ketogenic">
+                Ketogenic
+            </label>
+        </div>
+
+        <button id="searchButton">Search</button>
 
         <div id="searchResults" class="search-results"></div>
     </div>
