@@ -2,8 +2,9 @@
 //  IMPORTS
 // =====================
 
-import express, { response } from "express";
+import express from "express";
 import mysql from "mysql2/promise";
+import { CUISINES, DIETS } from "./data/recipeFilters.mjs";
 
 
 // =====================
@@ -59,7 +60,10 @@ app.get("/favorites", (req, res) => {
 });
 
 app.get("/search", (req, res) => {
-    res.render("search");
+    res.render("search", {
+        cuisines: CUISINES,
+        diets: DIETS
+    });
 });
 
 
@@ -69,6 +73,8 @@ app.get("/search", (req, res) => {
 
 app.get("/api/search/ingredients", async (req, res) => {
     const ingredients = req.query.ingredients?.trim();
+    const cuisine = req.query.cuisine?.trim();
+    const diet = req.query.diet?.trim();
 
     if (!ingredients) {
         return res.status(400).json({
@@ -92,20 +98,71 @@ app.get("/api/search/ingredients", async (req, res) => {
         const cleanedIngredients = cleanedArr.join(",");
 
 
-        const apiUrl = new URL("https://api.spoonacular.com/recipes/findByIngredients");
+        const apiUrl = new URL(`${spoonacularBaseUrl}/complexSearch`);
         apiUrl.searchParams.set("apiKey", spoonacularApiKey);
-        apiUrl.searchParams.set("ingredients", cleanedIngredients);
-        apiUrl.searchParams.set("number", "10");          // Max number of recipes to return
-        apiUrl.searchParams.set("ranking", "1");          // Maximize used ingredients
-        apiUrl.searchParams.set("ignorePantry", "true");  // Ignore common pantry items (e.g., water, salt, etc.)
+        apiUrl.searchParams.set("includeIngredients", cleanedIngredients);
+        apiUrl.searchParams.set("number", "10");
+        apiUrl.searchParams.set("sort", "max-used-ingredients");
+        apiUrl.searchParams.set("ignorePantry", "true");
+        apiUrl.searchParams.set("fillIngredients", "true");
+        apiUrl.searchParams.set("addRecipeInformation", "true");
+        apiUrl.searchParams.set("addRecipeInstructions", "true");
+        apiUrl.searchParams.set("instructionsRequired", "true");
+
+        // Optional search criteria
+        if (cuisine) {
+            apiUrl.searchParams.set("cuisine", cuisine);
+        }
+
+        if (diet) {
+            apiUrl.searchParams.set("diet", diet);
+        }
 
         const response = await fetch(apiUrl);
+
+        // Max 50 points per day for free tier, so display quota info
+        const quotaRequest = response.headers.get("X-API-Quota-Request");
+        const quotaLeft = response.headers.get("X-API-Quota-Left");
+
+        console.log("Spoonacular quota request:", quotaRequest);
+        console.log("Spoonacular quota left:", quotaLeft);
 
         if (!response.ok) {
             return res.status(response.status).json({error: "Failed to fetch recipes based on ingredients."});
         }
 
-        const recipes = await response.json();
+        const data = await response.json();
+
+        const results = data.results || [];
+        const recipes = [];
+
+        for (let recipe of results) {
+            let usedIngredients = recipe.usedIngredients || [];
+            let missedIngredients = recipe.missedIngredients || [];
+            let analyzedInstructions = recipe.analyzedInstructions || [];
+
+            let usedIngredientCount = recipe.usedIngredientCount;
+            if (usedIngredientCount == null) {
+                usedIngredientCount = usedIngredients.length;
+            }
+
+            let missedIngredientCount = recipe.missedIngredientCount;
+            if (missedIngredientCount == null) {
+                missedIngredientCount = missedIngredients.length;
+            }
+
+            let newRecipe = {
+                ...recipe,
+                usedIngredients: usedIngredients,
+                missedIngredients: missedIngredients,
+                analyzedInstructions: analyzedInstructions,
+                usedIngredientCount: usedIngredientCount,
+                missedIngredientCount: missedIngredientCount
+            };
+
+            recipes.push(newRecipe);
+        }
+
         res.send(recipes);
     }
     catch (err) {
@@ -128,5 +185,5 @@ app.get("/dbTest", async (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Example app listening on port http://localhost:${port}`);
+    console.log(`Server listening on port http://localhost:${port}`);
 });

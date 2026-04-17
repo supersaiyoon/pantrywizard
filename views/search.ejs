@@ -5,10 +5,37 @@
 
     <div class="body-div">
         <h1>Recipe Search</h1>
+
         <div class="search-container">
-            <input type="text" id="searchInput" placeholder="Enter ingredients like chicken, rice, garlic, etc.">
-            <button id="searchButton">Search</button>
+            <input type="text"
+                   id="searchInput"
+                   placeholder="Enter ingredients like chicken, rice, etc."
+            >
         </div>
+
+        <div class="filter-group">
+            <h3>Cuisine</h3>
+
+            <% for (let cuisine of cuisines) { %>
+                <label>
+                    <input type="checkbox" name="cuisine" value="<%= cuisine %>">
+                    <%= cuisine %>
+                </label>
+            <% } %>
+        </div>
+
+        <div class="filter-group">
+            <h3>Diet</h3>
+
+            <% for (let diet of diets) { %>
+                <label>
+                    <input type="checkbox" name="diet" value="<%= diet %>">
+                    <%= diet %>
+                </label>
+            <% } %>
+        </div>
+
+        <button id="searchButton">Search</button>
 
         <div id="searchResults" class="search-results"></div>
     </div>
