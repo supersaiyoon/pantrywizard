@@ -19,7 +19,7 @@
             <% for (let cuisine of cuisines) { %>
                 <label>
                     <input type="checkbox" name="cuisine" value="<%= cuisine %>">
-                    <%= cuisine.charAt(0).toUpperCase() + cuisine.slice(1) %>
+                    <%= cuisine %>
                 </label>
             <% } %>
         </div>
@@ -30,7 +30,7 @@
             <% for (let diet of diets) { %>
                 <label>
                     <input type="checkbox" name="diet" value="<%= diet %>">
-                    <%= diet.charAt(0).toUpperCase() + diet.slice(1) %>
+                    <%= diet %>
                 </label>
             <% } %>
         </div>
