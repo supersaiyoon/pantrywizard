@@ -106,6 +106,8 @@ app.get("/api/search/ingredients", async (req, res) => {
         apiUrl.searchParams.set("ignorePantry", "true");
         apiUrl.searchParams.set("fillIngredients", "true");
         apiUrl.searchParams.set("addRecipeInformation", "true");
+        apiUrl.searchParams.set("addRecipeInstructions", "true");
+        apiUrl.searchParams.set("instructionsRequired", "true");
 
         // Optional search criteria
         if (cuisine) {
@@ -116,27 +118,50 @@ app.get("/api/search/ingredients", async (req, res) => {
             apiUrl.searchParams.set("diet", diet);
         }
 
-        console.log("Ingredient search API URL:", apiUrl.toString());
-
         const response = await fetch(apiUrl);
+
+        // Max 50 points per day for free tier, so display quota info
+        const quotaRequest = response.headers.get("X-API-Quota-Request");
+        const quotaLeft = response.headers.get("X-API-Quota-Left");
+
+        console.log("Spoonacular quota request:", quotaRequest);
+        console.log("Spoonacular quota left:", quotaLeft);
 
         if (!response.ok) {
             return res.status(response.status).json({error: "Failed to fetch recipes based on ingredients."});
         }
 
         const data = await response.json();
-        const recipes = (data.results || []).map((recipe) => {
-            const usedIngredients = recipe.usedIngredients || [];
-            const missedIngredients = recipe.missedIngredients || [];
 
-            return {
+        const results = data.results || [];
+        const recipes = [];
+
+        for (let recipe of results) {
+            let usedIngredients = recipe.usedIngredients || [];
+            let missedIngredients = recipe.missedIngredients || [];
+            let analyzedInstructions = recipe.analyzedInstructions || [];
+
+            let usedIngredientCount = recipe.usedIngredientCount;
+            if (usedIngredientCount == null) {
+                usedIngredientCount = usedIngredients.length;
+            }
+
+            let missedIngredientCount = recipe.missedIngredientCount;
+            if (missedIngredientCount == null) {
+                missedIngredientCount = missedIngredients.length;
+            }
+
+            let newRecipe = {
                 ...recipe,
-                usedIngredients,
-                missedIngredients,
-                usedIngredientCount: recipe.usedIngredientCount ?? usedIngredients.length,
-                missedIngredientCount: recipe.missedIngredientCount ?? missedIngredients.length
+                usedIngredients: usedIngredients,
+                missedIngredients: missedIngredients,
+                analyzedInstructions: analyzedInstructions,
+                usedIngredientCount: usedIngredientCount,
+                missedIngredientCount: missedIngredientCount
             };
-        });
+
+            recipes.push(newRecipe);
+        }
 
         res.send(recipes);
     }
@@ -160,5 +185,5 @@ app.get("/dbTest", async (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Example app listening on port http://localhost:${port}`);
+    console.log(`Server listening on port http://localhost:${port}`);
 });

@@ -83,6 +83,8 @@ async function searchRecipes() {
                 <p><strong>Missing ingredients:</strong> ${recipe.missedIngredientCount}</p>
                 <p><strong>You have:</strong> ${formatIngredientList(recipe.usedIngredients)}</p>
                 <p><strong>You still need:</strong> ${formatIngredientList(recipe.missedIngredients)}</p>
+                <p><strong>Instructions:</strong></p>
+                ${formatInstructions(recipe.analyzedInstructions)}
             `;
             searchResults.appendChild(recipeDiv);
         }
@@ -99,4 +101,25 @@ function formatIngredientList(ingredients) {
     }
 
     return ingredients.map((ingredient) => ingredient.name).join(", ");
+}
+
+function formatInstructions(analyzedInstructions) {
+    if (!analyzedInstructions || analyzedInstructions.length === 0) {
+        return "<p>No instructions available.</p>";
+    }
+
+    const firstInstructionSet = analyzedInstructions[0];
+
+    if (!firstInstructionSet.steps || firstInstructionSet.steps.length === 0) {
+        return "<p>No instructions available.</p>";
+    }
+
+    let instructionHtml = "<ol>";
+
+    for (let step of firstInstructionSet.steps) {
+        instructionHtml += `<li>${step.step}</li>`;
+    }
+
+    instructionHtml += "</ol>";
+    return instructionHtml;
 }
