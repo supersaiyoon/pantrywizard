@@ -1,6 +1,4 @@
 const searchInput = document.getElementById("searchInput");
-const cuisineInput = document.getElementById("cuisineInput");
-const dietInput = document.getElementById("dietInput");
 const searchButton = document.getElementById("searchButton");
 const searchResults = document.getElementById("searchResults");
 
@@ -8,23 +6,35 @@ const searchResults = document.getElementById("searchResults");
 if (searchButton && searchInput && searchResults) {
     searchButton.addEventListener("click", searchRecipes);
 
-    for (const input of [searchInput, cuisineInput, dietInput]) {
-        if (!input) {
-            continue;
+    // Trigger search on Enter key press
+    searchInput.addEventListener("keypress", (event) => {
+        if (event.key === "Enter") {
+            searchRecipes();
         }
-
-        input.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") {
-                searchRecipes();
-            }
-        });
-    }
+    });
 }
 
 async function searchRecipes() {
     const ingredients = searchInput.value.trim();
-    const cuisine = cuisineInput?.value.trim() || "";
-    const diet = dietInput?.value.trim() || "";
+
+    // Get selected cuisines and diets from checkboxes AFTER user clicks search
+    const cuisineCheckboxes = document.querySelectorAll("input[name='cuisine']:checked");
+    const dietCheckboxes = document.querySelectorAll("input[name='diet']:checked");
+    
+    const cuisines = [];
+    const diets = [];
+
+    for (let checkbox of cuisineCheckboxes) {
+        cuisines.push(checkbox.value);
+    }
+
+    for (let checkbox of dietCheckboxes) {
+        diets.push(checkbox.value);
+    }
+
+    console.log("Searching with ingredients:", ingredients);
+    console.log("Selected cuisines:", cuisines);
+    console.log("Selected diets:", diets);
 
     if (!ingredients) {
         searchResults.innerHTML = "<p>Please enter at least one ingredient.</p>";
@@ -35,17 +45,15 @@ async function searchRecipes() {
 
     try {
         // Build query parameters for API request
-        const params = new URLSearchParams({
-            ingredients
-        });
+        const params = new URLSearchParams({ingredients});
 
         // Optional search criteria
-        if (cuisine) {
-            params.set("cuisine", cuisine);
+        if (cuisines.length > 0) {
+            params.set("cuisine", cuisines.join(","));
         }
 
-        if (diet) {
-            params.set("diet", diet);
+        if (diets.length > 0) {
+            params.set("diet", diets.join(","));
         }
 
         const response = await fetch(`/api/search/ingredients?${params.toString()}`);
