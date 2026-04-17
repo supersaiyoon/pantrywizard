@@ -36,12 +36,12 @@ async function searchRecipes() {
 
         searchResults.innerHTML = "";
 
-        if (!data.recipes || data.recipes.length === 0) {
+        if (!data || data.length === 0) {
             searchResults.innerHTML = "<p>No recipes found.</p>";
             return;
         }
 
-        data.recipes.forEach((recipe) => {
+        for (const recipe of data) {
             const recipeDiv = document.createElement("div");
             recipeDiv.className = "recipe";
             recipeDiv.innerHTML = `
@@ -53,7 +53,7 @@ async function searchRecipes() {
                 <p><strong>You still need:</strong> ${formatIngredientList(recipe.missedIngredients)}</p>
             `;
             searchResults.appendChild(recipeDiv);
-        });
+        }
     }
     catch (error) {
         console.error(error);
