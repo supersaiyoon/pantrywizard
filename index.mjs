@@ -2,7 +2,7 @@
 //  IMPORTS
 // =====================
 
-import express, { response } from "express";
+import express from "express";
 import mysql from "mysql2/promise";
 
 
@@ -69,6 +69,8 @@ app.get("/search", (req, res) => {
 
 app.get("/api/search/ingredients", async (req, res) => {
     const ingredients = req.query.ingredients?.trim();
+    const cuisine = req.query.cuisine?.trim();
+    const diet = req.query.diet?.trim();
 
     if (!ingredients) {
         return res.status(400).json({
@@ -92,12 +94,25 @@ app.get("/api/search/ingredients", async (req, res) => {
         const cleanedIngredients = cleanedArr.join(",");
 
 
-        const apiUrl = new URL("https://api.spoonacular.com/recipes/findByIngredients");
+        const apiUrl = new URL(`${spoonacularBaseUrl}/complexSearch`);
         apiUrl.searchParams.set("apiKey", spoonacularApiKey);
-        apiUrl.searchParams.set("ingredients", cleanedIngredients);
-        apiUrl.searchParams.set("number", "10");          // Max number of recipes to return
-        apiUrl.searchParams.set("ranking", "1");          // Maximize used ingredients
-        apiUrl.searchParams.set("ignorePantry", "true");  // Ignore common pantry items (e.g., water, salt, etc.)
+        apiUrl.searchParams.set("includeIngredients", cleanedIngredients);
+        apiUrl.searchParams.set("number", "10");
+        apiUrl.searchParams.set("sort", "max-used-ingredients");
+        apiUrl.searchParams.set("ignorePantry", "true");
+        apiUrl.searchParams.set("fillIngredients", "true");
+        apiUrl.searchParams.set("addRecipeInformation", "true");
+
+        // Optional search criteria
+        if (cuisine) {
+            apiUrl.searchParams.set("cuisine", cuisine);
+        }
+
+        if (diet) {
+            apiUrl.searchParams.set("diet", diet);
+        }
+
+        console.log("Ingredient search API URL:", apiUrl.toString());
 
         const response = await fetch(apiUrl);
 
@@ -105,7 +120,20 @@ app.get("/api/search/ingredients", async (req, res) => {
             return res.status(response.status).json({error: "Failed to fetch recipes based on ingredients."});
         }
 
-        const recipes = await response.json();
+        const data = await response.json();
+        const recipes = (data.results || []).map((recipe) => {
+            const usedIngredients = recipe.usedIngredients || [];
+            const missedIngredients = recipe.missedIngredients || [];
+
+            return {
+                ...recipe,
+                usedIngredients,
+                missedIngredients,
+                usedIngredientCount: recipe.usedIngredientCount ?? usedIngredients.length,
+                missedIngredientCount: recipe.missedIngredientCount ?? missedIngredients.length
+            };
+        });
+
         res.send(recipes);
     }
     catch (err) {

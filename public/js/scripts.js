@@ -1,4 +1,6 @@
 const searchInput = document.getElementById("searchInput");
+const cuisineInput = document.getElementById("cuisineInput");
+const dietInput = document.getElementById("dietInput");
 const searchButton = document.getElementById("searchButton");
 const searchResults = document.getElementById("searchResults");
 
@@ -6,15 +8,23 @@ const searchResults = document.getElementById("searchResults");
 if (searchButton && searchInput && searchResults) {
     searchButton.addEventListener("click", searchRecipes);
 
-    searchInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-            searchRecipes();
+    for (const input of [searchInput, cuisineInput, dietInput]) {
+        if (!input) {
+            continue;
         }
-    });
+
+        input.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                searchRecipes();
+            }
+        });
+    }
 }
 
 async function searchRecipes() {
     const ingredients = searchInput.value.trim();
+    const cuisine = cuisineInput?.value.trim() || "";
+    const diet = dietInput?.value.trim() || "";
 
     if (!ingredients) {
         searchResults.innerHTML = "<p>Please enter at least one ingredient.</p>";
@@ -24,9 +34,21 @@ async function searchRecipes() {
     searchResults.innerHTML = "<p>Searching for recipes...</p>";
 
     try {
-        const response = await fetch(
-            `/api/search/ingredients?ingredients=${encodeURIComponent(ingredients)}`
-        );
+        // Build query parameters for API request
+        const params = new URLSearchParams({
+            ingredients
+        });
+
+        // Optional search criteria
+        if (cuisine) {
+            params.set("cuisine", cuisine);
+        }
+
+        if (diet) {
+            params.set("diet", diet);
+        }
+
+        const response = await fetch(`/api/search/ingredients?${params.toString()}`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -47,6 +69,8 @@ async function searchRecipes() {
             recipeDiv.innerHTML = `
                 <h3>${recipe.title}</h3>
                 <img src="${recipe.image}" alt="${recipe.title}">
+                <p><strong>Ready in:</strong> ${recipe.readyInMinutes || "N/A"} minutes</p>
+                <p><strong>Servings:</strong> ${recipe.servings || "N/A"}</p>
                 <p><strong>Used ingredients:</strong> ${recipe.usedIngredientCount}</p>
                 <p><strong>Missing ingredients:</strong> ${recipe.missedIngredientCount}</p>
                 <p><strong>You have:</strong> ${formatIngredientList(recipe.usedIngredients)}</p>
