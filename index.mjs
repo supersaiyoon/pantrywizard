@@ -31,7 +31,7 @@ const spoonacularApiKey = process.env.SPOONACULAR_API_KEY;
 const theMealDbApiKey = process.env.THEMEALDB_API_KEY;
 
 // API base URLs
-const findByIngredients = `https://api.spoonacular.com/recipes/findByIngredients?apiKey=${spoonacularApiKey}`;
+const spoonacularBaseUrl = "https://api.spoonacular.com/recipes";
 const theMealDbSearchBaseUrl = `https://www.themealdb.com/api/json/v1/${theMealDbApiKey}`;
 
 //for Express to get values using POST method
@@ -67,7 +67,53 @@ app.get("/search", (req, res) => {
 // API ENDPOINTS
 // =====================
 
-// TODO: Implement API endpoints for searching recipes
+app.get("/api/search/ingredients", async (req, res) => {
+    const ingredients = req.query.ingredients?.trim();
+
+    if (!ingredients) {
+        return res.status(400).json({
+            error: "Please enter at least one ingredient."
+        });
+    }
+
+    try {
+        // Clean and format ingredients list from raw input
+        let ingredientArr = ingredients.split(",");
+        let cleanedArr = [];
+
+        for (let ingredient of ingredientArr) {
+            ingredient = ingredient.trim();
+
+            if (ingredient !== "") {
+                cleanedArr.push(ingredient);
+            }
+        }
+
+        const cleanedIngredients = cleanedArr.join(",");
+
+
+        const apiUrl = new URL("https://api.spoonacular.com/recipes/findByIngredients");
+        apiUrl.searchParams.set("apiKey", spoonacularApiKey);
+        apiUrl.searchParams.set("ingredients", cleanedIngredients);
+        apiUrl.searchParams.set("number", "10");          // Max number of recipes to return
+        apiUrl.searchParams.set("ranking", "1");          // Maximize used ingredients
+        apiUrl.searchParams.set("ignorePantry", "true");  // Ignore common pantry items (e.g., water, salt, etc.)
+
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+            return res.status(response.status).json({error: "Failed to fetch recipes based on ingredients."});
+        }
+
+        const recipes = await response.json();
+        res.send(recipes);
+    }
+    catch (err) {
+        console.error("Ingredient search error:", err);
+        res.status(500).json({error: "Failed to fetch recipes."});
+    }
+});
+
 
 // Test database connection
 app.get("/dbTest", async (req, res) => {

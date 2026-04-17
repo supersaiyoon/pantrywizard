@@ -4,8 +4,15 @@
     <%- include('partials/nav') %>
 
     <div class="body-div">
-    <h1>Search</h1>
+        <h1>Recipe Search</h1>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Enter ingredients like chicken, rice, garlic, etc.">
+            <button id="searchButton">Search</button>
+        </div>
+
+        <div id="searchResults" class="search-results"></div>
     </div>
+
     <%- include('partials/footer') %>
 </body>
 
