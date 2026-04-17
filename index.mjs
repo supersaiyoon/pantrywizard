@@ -1,10 +1,19 @@
+// =====================
+//  IMPORTS
+// =====================
+
 import express, { response } from "express";
 import mysql from "mysql2/promise";
+
+
+// =====================
+// SETUP & CONFIGURATION
+// =====================
 
 const { query, body, validationResult } = await import("express-validator");
 const app = express();
 
-//for render
+// For render
 const port = process.env.PORT || 4000;
 import "dotenv/config";
 import config from "./config.mjs";
@@ -12,27 +21,66 @@ import config from "./config.mjs";
 app.set("view engine", "ejs");
 app.use(express.static("public"));
 
+
+// =====================
+// API CONFIGURATION
+// =====================
+
+// API keys
+const spoonacularApiKey = process.env.SPOONACULAR_API_KEY;
+const theMealDbApiKey = process.env.THEMEALDB_API_KEY;
+
+// API base URLs
+const findByIngredients = `https://api.spoonacular.com/recipes/findByIngredients?apiKey=${spoonacularApiKey}`;
+const theMealDbSearchBaseUrl = `https://www.themealdb.com/api/json/v1/${theMealDbApiKey}`;
+
 //for Express to get values using POST method
 app.use(express.urlencoded({ extended: true }));
 
 //setting up database connection pool
 const pool = mysql.createPool(config);
 
-//routes
+
+// =====================
+// ROUTES
+// =====================
+
+// Home page
 app.get("/", (req, res) => {
-  res.render("index");
+    res.render("index");
 });
 
-app.get("/dbTest", async(req, res) => {
-   try {
+app.get("/about", (req, res) => {
+    res.render("about");
+});
+
+app.get("/favorites", (req, res) => {
+    res.render("favorites");
+});
+
+app.get("/search", (req, res) => {
+    res.render("search");
+});
+
+
+// =====================
+// API ENDPOINTS
+// =====================
+
+// TODO: Implement API endpoints for searching recipes
+
+// Test database connection
+app.get("/dbTest", async (req, res) => {
+    try {
         const [rows] = await pool.query("SELECT CURDATE()");
         res.send(rows);
-    } catch (err) {
+    }
+    catch (err) {
         console.error("Database error:", err);
         res.status(500).send("Database error");
     }
-});//dbTest
+});
 
 app.listen(port, () => {
-  console.log(`Example app listening on port http://localhost:${port}`);
+    console.log(`Example app listening on port http://localhost:${port}`);
 });
