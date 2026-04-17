@@ -1,0 +1,43 @@
+export const CUISINES = [
+    "african",
+    "asian",
+    "american",
+    "british",
+    "cajun",
+    "caribbean",
+    "chinese",
+    "eastern european",
+    "european",
+    "french",
+    "german",
+    "greek",
+    "indian",
+    "irish",
+    "italian",
+    "japanese",
+    "jewish",
+    "korean",
+    "latin american",
+    "mediterranean",
+    "mexican",
+    "middle eastern",
+    "nordic",
+    "southern",
+    "spanish",
+    "thai",
+    "vietnamese"
+];
+
+export const DIETS = [
+    "gluten free",
+    "ketogenic",
+    "vegetarian",
+    "lacto-vegetarian",
+    "ovo-vegetarian",
+    "vegan",
+    "pescetarian",
+    "paleo",
+    "primal",
+    "low fodmap",
+    "whole30"
+];

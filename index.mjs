@@ -4,6 +4,7 @@
 
 import express from "express";
 import mysql from "mysql2/promise";
+import { CUISINES, DIETS } from "./data/recipeFilters.mjs";
 
 
 // =====================
@@ -59,7 +60,10 @@ app.get("/favorites", (req, res) => {
 });
 
 app.get("/search", (req, res) => {
-    res.render("search");
+    res.render("search", {
+        cuisines: CUISINES,
+        diets: DIETS
+    });
 });
 
 
