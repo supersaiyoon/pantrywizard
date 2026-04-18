@@ -31,6 +31,28 @@ body{
   height: 100%;
   font-size: 18px;
   font-weight: 500;
+  align-items: center;
+}
+
+.nav-user {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 15px;
+}
+
+.nav-logout-form {
+  height: 100%;
+}
+
+.nav-logout-button {
+  border: none;
+  background: transparent;
+  color: black;
+  height: 100%;
+  padding: 0 32px;
+  cursor: pointer;
+  font: inherit;
 }
 
 /* ---------------------- */
@@ -82,4 +104,45 @@ footer{
 .source-details {
   color: #47523f;
   font-style: italic;
+}
+
+.auth-form {
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.auth-form input,
+.auth-form button {
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.auth-form button {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.form-errors,
+.form-success {
+  max-width: 420px;
+  padding: 12px;
+  margin-top: 16px;
+  border-radius: 8px;
+}
+
+.form-errors {
+  background-color: #f8d7da;
+  color: #842029;
+}
+
+.form-success {
+  background-color: #d1e7dd;
+  color: #0f5132;
+}
+
+.auth-helper-text {
+  margin-top: 12px;
 }
