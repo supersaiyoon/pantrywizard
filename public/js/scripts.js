@@ -75,16 +75,15 @@ async function searchRecipes() {
             const recipeDiv = document.createElement("div");
             recipeDiv.className = "recipe";
             recipeDiv.innerHTML = `
-                <h3>${recipe.title}</h3>
+                <div class="recipe-header">
+                    <h3>${recipe.title}</h3>
+                    <span class="source-badge">${recipe.source || "Recipe"}</span>
+                </div>
                 <img src="${recipe.image}" alt="${recipe.title}">
-                <p><strong>Ready in:</strong> ${recipe.readyInMinutes || "N/A"} minutes</p>
-                <p><strong>Servings:</strong> ${recipe.servings || "N/A"}</p>
-                <p><strong>Used ingredients:</strong> ${recipe.usedIngredientCount}</p>
-                <p><strong>Missing ingredients:</strong> ${recipe.missedIngredientCount}</p>
-                <p><strong>You have:</strong> ${formatIngredientList(recipe.usedIngredients)}</p>
-                <p><strong>You still need:</strong> ${formatIngredientList(recipe.missedIngredients)}</p>
+                ${formatRecipeMeta(recipe)}
+                ${formatSourceDetails(recipe)}
                 <p><strong>Instructions:</strong></p>
-                ${formatInstructions(recipe.analyzedInstructions)}
+                ${formatInstructions(recipe)}
             `;
             searchResults.appendChild(recipeDiv);
         }
@@ -103,14 +102,70 @@ function formatIngredientList(ingredients) {
     return ingredients.map((ingredient) => ingredient.name).join(", ");
 }
 
-function formatInstructions(analyzedInstructions) {
+function formatRecipeMeta(recipe) {
+    const sections = [];
+
+    if (recipe.readyInMinutes != null) {
+        sections.push(`<p><strong>Ready in:</strong> ${recipe.readyInMinutes} minutes</p>`);
+    }
+
+    if (recipe.servings != null) {
+        sections.push(`<p><strong>Servings:</strong> ${recipe.servings}</p>`);
+    }
+
+    if (recipe.usedIngredientCount != null) {
+        sections.push(`<p><strong>Used ingredients:</strong> ${recipe.usedIngredientCount}</p>`);
+    }
+
+    if (recipe.missedIngredientCount != null) {
+        sections.push(`<p><strong>Missing ingredients:</strong> ${recipe.missedIngredientCount}</p>`);
+    }
+
+    if (recipe.usedIngredients?.length) {
+        sections.push(`<p><strong>You have:</strong> ${formatIngredientList(recipe.usedIngredients)}</p>`);
+    }
+
+    if (recipe.missedIngredients?.length) {
+        sections.push(`<p><strong>You still need:</strong> ${formatIngredientList(recipe.missedIngredients)}</p>`);
+    }
+
+    if (recipe.category) {
+        sections.push(`<p><strong>Category:</strong> ${recipe.category}</p>`);
+    }
+
+    if (recipe.area) {
+        sections.push(`<p><strong>Region:</strong> ${recipe.area}</p>`);
+    }
+
+    return sections.join("");
+}
+
+function formatSourceDetails(recipe) {
+    if (!recipe.sourceDetails) {
+        return "";
+    }
+
+    return `<p class="source-details">${recipe.sourceDetails}</p>`;
+}
+
+function formatInstructions(recipe) {
+    const analyzedInstructions = recipe.analyzedInstructions;
+
     if (!analyzedInstructions || analyzedInstructions.length === 0) {
+        if (recipe.instructionsText) {
+            return `<p>${recipe.instructionsText}</p>`;
+        }
+
         return "<p>No instructions available.</p>";
     }
 
     const firstInstructionSet = analyzedInstructions[0];
 
     if (!firstInstructionSet.steps || firstInstructionSet.steps.length === 0) {
+        if (recipe.instructionsText) {
+            return `<p>${recipe.instructionsText}</p>`;
+        }
+
         return "<p>No instructions available.</p>";
     }
 

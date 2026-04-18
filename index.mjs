@@ -29,11 +29,11 @@ app.use(express.static("public"));
 
 // API keys
 const spoonacularApiKey = process.env.SPOONACULAR_API_KEY;
-const theMealDbApiKey = process.env.THEMEALDB_API_KEY;
+const theMealDbApiKey = process.env.THEMEALDB_API_KEY || "1";
 
 // API base URLs
 const spoonacularBaseUrl = "https://api.spoonacular.com/recipes";
-const theMealDbSearchBaseUrl = `https://www.themealdb.com/api/json/v1/${theMealDbApiKey}`;
+const theMealDbBaseUrl = `https://www.themealdb.com/api/json/v1/${theMealDbApiKey}`;
 
 //for Express to get values using POST method
 app.use(express.urlencoded({ extended: true }));
@@ -96,6 +96,7 @@ app.get("/api/search/ingredients", async (req, res) => {
         }
 
         const cleanedIngredients = cleanedArr.join(",");
+        const isSingleIngredientSearch = cleanedArr.length === 1;
 
 
         const apiUrl = new URL(`${spoonacularBaseUrl}/complexSearch`);
@@ -153,6 +154,9 @@ app.get("/api/search/ingredients", async (req, res) => {
 
             let newRecipe = {
                 ...recipe,
+                source: "Spoonacular",
+                sourceDetails: "Matches your pantry ingredients and applies cuisine/diet filters.",
+                filtersApplied: true,
                 usedIngredients: usedIngredients,
                 missedIngredients: missedIngredients,
                 analyzedInstructions: analyzedInstructions,
@@ -161,6 +165,14 @@ app.get("/api/search/ingredients", async (req, res) => {
             };
 
             recipes.push(newRecipe);
+        }
+
+        if (isSingleIngredientSearch) {
+            const mealDbRecipes = await fetchMealDbRecipesByIngredient(cleanedArr[0], {
+                hasFilters: Boolean(cuisine || diet)
+            });
+
+            recipes.push(...mealDbRecipes);
         }
 
         res.send(recipes);
@@ -187,3 +199,86 @@ app.get("/dbTest", async (req, res) => {
 app.listen(port, () => {
     console.log(`Server listening on port http://localhost:${port}`);
 });
+
+async function fetchMealDbRecipesByIngredient(ingredient, options = {}) {
+    const { hasFilters = false } = options;
+    const searchUrl = new URL(`${theMealDbBaseUrl}/filter.php`);
+    searchUrl.searchParams.set("i", ingredient);
+
+    try {
+        const response = await fetch(searchUrl);
+
+        if (!response.ok) {
+            console.error("TheMealDB ingredient search failed:", response.status);
+            return [];
+        }
+
+        const data = await response.json();
+        const meals = data.meals || [];
+
+        if (meals.length === 0) {
+            return [];
+        }
+
+        const detailedMeals = await Promise.all(
+            meals.slice(0, 10).map((meal) => fetchMealDbRecipeDetails(meal.idMeal))
+        );
+
+        return detailedMeals
+            .filter(Boolean)
+            .map((meal) => normalizeMealDbRecipe(meal, hasFilters));
+    }
+    catch (err) {
+        console.error("TheMealDB ingredient search error:", err);
+        return [];
+    }
+}
+
+async function fetchMealDbRecipeDetails(mealId) {
+    const lookupUrl = new URL(`${theMealDbBaseUrl}/lookup.php`);
+    lookupUrl.searchParams.set("i", mealId);
+
+    try {
+        const response = await fetch(lookupUrl);
+
+        if (!response.ok) {
+            console.error("TheMealDB lookup failed for meal:", mealId, response.status);
+            return null;
+        }
+
+        const data = await response.json();
+        return data.meals?.[0] || null;
+    }
+    catch (err) {
+        console.error("TheMealDB lookup error for meal:", mealId, err);
+        return null;
+    }
+}
+
+function normalizeMealDbRecipe(meal, hasFilters) {
+    const instructions = meal.strInstructions?.trim() || "";
+    const steps = instructions
+        .split(/\r?\n+/)
+        .map((step) => step.trim())
+        .filter(Boolean)
+        .map((step) => ({ step }));
+
+    return {
+        id: meal.idMeal,
+        title: meal.strMeal,
+        image: meal.strMealThumb,
+        source: "TheMealDB",
+        sourceDetails: hasFilters
+            ? "Single-ingredient match from TheMealDB. Cuisine and diet filters do not apply."
+            : "Single-ingredient match from TheMealDB.",
+        filtersApplied: false,
+        category: meal.strCategory || null,
+        area: meal.strArea || null,
+        usedIngredients: [],
+        missedIngredients: [],
+        usedIngredientCount: null,
+        missedIngredientCount: null,
+        analyzedInstructions: steps.length > 0 ? [{ steps }] : [],
+        instructionsText: instructions
+    };
+}
