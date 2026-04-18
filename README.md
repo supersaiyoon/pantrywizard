@@ -25,7 +25,7 @@ SESSION_SECRET=
 
 To test the database connection go to: http://localhost:4000/dbtest
 
-Before using login, create the `users` table with the SQL in `data/usersTable.sql`.
+The app creates the `users` table automatically when the server starts.
 
 ### Running the project
 

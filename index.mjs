@@ -391,9 +391,30 @@ app.get("/dbTest", async (req, res) => {
     }
 });
 
+createUsersTable();
+
 app.listen(port, () => {
     console.log(`Server listening on port http://localhost:${port}`);
 });
+
+async function createUsersTable() {
+    let sql = `CREATE TABLE IF NOT EXISTS users (
+                   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                   username VARCHAR(50) NOT NULL,
+                   password_hash VARCHAR(255) NOT NULL,
+                   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                   PRIMARY KEY (id),
+                   UNIQUE KEY unique_username (username)
+               )`;
+
+    try {
+        await pool.query(sql);
+        console.log("Users table is ready.");
+    }
+    catch (err) {
+        console.error("Error creating users table:", err);
+    }
+}
 
 async function fetchMealDbRecipesByIngredient(ingredient, options = {}) {
     const { hasFilters = false } = options;
