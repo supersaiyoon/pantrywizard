@@ -25,6 +25,8 @@ SESSION_SECRET=
 
 To test the database connection go to: http://localhost:4000/dbtest
 
+Before using login, create the `users` table with the SQL in `data/usersTable.sql`.
+
 ### Running the project
 
 `node index.mjs`
