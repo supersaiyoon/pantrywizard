@@ -4,6 +4,8 @@
 
 import express from "express";
 import mysql from "mysql2/promise";
+import bcrypt from "bcrypt";
+import session from "express-session";
 import { CUISINES, DIETS } from "./data/recipeFilters.mjs";
 
 
@@ -11,7 +13,6 @@ import { CUISINES, DIETS } from "./data/recipeFilters.mjs";
 // SETUP & CONFIGURATION
 // =====================
 
-const { query, body, validationResult } = await import("express-validator");
 const app = express();
 
 // For render
@@ -30,6 +31,12 @@ app.use(express.static("public"));
 // API keys
 const spoonacularApiKey = process.env.SPOONACULAR_API_KEY;
 const theMealDbApiKey = process.env.THEMEALDB_API_KEY || "1";
+const sessionSecret = process.env.SESSION_SECRET;
+const saltRounds = 10;
+
+if (!sessionSecret) {
+    throw new Error("SESSION_SECRET is required. Add it to your .env file before starting the server.");
+}
 
 // API base URLs
 const spoonacularBaseUrl = "https://api.spoonacular.com/recipes";
@@ -37,6 +44,22 @@ const theMealDbBaseUrl = `https://www.themealdb.com/api/json/v1/${theMealDbApiKe
 
 //for Express to get values using POST method
 app.use(express.urlencoded({ extended: true }));
+app.use(session({
+    secret: sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 1000 * 60 * 60 * 24
+    }
+}));
+
+app.use((req, res, next) => {
+    res.locals.currentUser = req.session.username || null;
+    res.locals.isAuthenticated = Boolean(req.session.userId);
+    next();
+});
 
 //setting up database connection pool
 const pool = mysql.createPool(config);
@@ -55,8 +78,178 @@ app.get("/about", (req, res) => {
     res.render("about");
 });
 
-app.get("/favorites", (req, res) => {
+app.get("/favorites", isAuthenticated, (req, res) => {
     res.render("favorites");
+});
+
+app.get("/register", (req, res) => {
+    if (req.session.userId) {
+        return res.redirect("/search");
+    }
+
+    res.render("register", {
+        errors: [],
+        successMessage: "",
+        formData: {
+            username: ""
+        }
+    });
+});
+
+app.post("/register", async (req, res) => {
+    let username = req.body.username || "";
+    let password = req.body.password || "";
+    let errors = [];
+
+    username = username.trim().toLowerCase();
+
+    if (username === "") {
+        errors.push({ msg: "Username is required." });
+    }
+
+    if (username.length > 0 && (username.length < 3 || username.length > 50)) {
+        errors.push({ msg: "Username must be between 3 and 50 characters." });
+    }
+
+    if (password === "") {
+        errors.push({ msg: "Password is required." });
+    }
+
+    if (password.length > 0 && password.length < 8) {
+        errors.push({ msg: "Password must be at least 8 characters long." });
+    }
+
+    if (errors.length > 0) {
+        return res.status(400).render("register", {
+            errors: errors,
+            successMessage: "",
+            formData: { username }
+        });
+    }
+
+    try {
+        let sql = `SELECT id
+                   FROM users
+                   WHERE username = ?`;
+
+        const [rows] = await pool.query(sql, [username]);
+
+        if (rows.length > 0) {
+            return res.status(400).render("register", {
+                errors: [{ msg: "That username is already taken." }],
+                successMessage: "",
+                formData: { username }
+            });
+        }
+
+        let passwordHash = await bcrypt.hash(password, saltRounds);
+
+        sql = `INSERT INTO users (username, password_hash)
+               VALUES (?, ?)`;
+
+        await pool.query(sql, [username, passwordHash]);
+
+        res.status(201).render("register", {
+            errors: [],
+            successMessage: "Account created successfully. You can log in next.",
+            formData: {
+                username: ""
+            }
+        });
+    }
+    catch (err) {
+        console.error("Registration error:", err);
+        res.status(500).render("register", {
+            errors: [{ msg: "Unable to create account right now." }],
+            successMessage: "",
+            formData: { username }
+        });
+    }
+});
+
+app.get("/login", (req, res) => {
+    if (req.session.userId) {
+        return res.redirect("/search");
+    }
+
+    res.render("login", {
+        errors: [],
+        formData: {
+            username: ""
+        }
+    });
+});
+
+app.post("/login", async (req, res) => {
+    let username = req.body.username || "";
+    let password = req.body.password || "";
+    let errors = [];
+
+    username = username.trim().toLowerCase();
+
+    if (username === "") {
+        errors.push({ msg: "Username is required." });
+    }
+
+    if (password === "") {
+        errors.push({ msg: "Password is required." });
+    }
+
+    if (errors.length > 0) {
+        return res.status(400).render("login", {
+            errors: errors,
+            formData: { username }
+        });
+    }
+
+    try {
+        let sql = `SELECT *
+                   FROM users
+                   WHERE username = ?`;
+
+        const [rows] = await pool.query(sql, [username]);
+
+        if (rows.length === 0) {
+            return res.status(401).render("login", {
+                errors: [{ msg: "Invalid username or password." }],
+                formData: { username }
+            });
+        }
+
+        let user = rows[0];
+        let match = await bcrypt.compare(password, user.password_hash);
+
+        if (!match) {
+            return res.status(401).render("login", {
+                errors: [{ msg: "Invalid username or password." }],
+                formData: { username }
+            });
+        }
+
+        req.session.userId = user.id;
+        req.session.username = user.username;
+
+        res.redirect("/search");
+    }
+    catch (err) {
+        console.error("Login error:", err);
+        res.status(500).render("login", {
+            errors: [{ msg: "Unable to log in right now." }],
+            formData: { username }
+        });
+    }
+});
+
+app.post("/logout", (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error("Logout error:", err);
+            return res.status(500).send("Unable to log out right now.");
+        }
+
+        res.clearCookie("connect.sid");
+        res.redirect("/");
+    });
 });
 
 app.get("/search", (req, res) => {
@@ -198,9 +391,30 @@ app.get("/dbTest", async (req, res) => {
     }
 });
 
+createUsersTable();
+
 app.listen(port, () => {
     console.log(`Server listening on port http://localhost:${port}`);
 });
+
+async function createUsersTable() {
+    let sql = `CREATE TABLE IF NOT EXISTS users (
+                   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                   username VARCHAR(50) NOT NULL,
+                   password_hash VARCHAR(255) NOT NULL,
+                   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                   PRIMARY KEY (id),
+                   UNIQUE KEY unique_username (username)
+               )`;
+
+    try {
+        await pool.query(sql);
+        console.log("Users table is ready.");
+    }
+    catch (err) {
+        console.error("Error creating users table:", err);
+    }
+}
 
 async function fetchMealDbRecipesByIngredient(ingredient, options = {}) {
     const { hasFilters = false } = options;
@@ -367,4 +581,12 @@ function isMealDbContinuation(segment) {
     }
 
     return false;
+}
+
+function isAuthenticated(req, res, next) {
+    if (!req.session.userId) {
+        return res.redirect("/login");
+    }
+
+    next();
 }

@@ -7,5 +7,16 @@
     <a href="/search"> Search </a>
     <a href="/favorites"> Favorites </a>
     <a href="/about"> About </a>
+
+    <% if (isAuthenticated) { %>
+      <span class="nav-user">Signed in as <%= currentUser %></span>
+
+      <form method="POST" action="/logout" class="nav-logout-form">
+        <button type="submit" class="nav-logout-button">Logout</button>
+      </form>
+    <% } else { %>
+      <a href="/login"> Login </a>
+      <a href="/register"> Register </a>
+    <% } %>
   </div>
 </div>
