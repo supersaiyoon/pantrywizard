@@ -84,6 +84,10 @@ app.get("/favorites", (req, res) => {
 });
 
 app.get("/register", (req, res) => {
+    if (req.session.userId) {
+        return res.redirect("/search");
+    }
+
     res.render("register", {
         errors: [],
         successMessage: "",
@@ -153,6 +157,88 @@ app.post(
         }
     }
 );
+
+app.get("/login", (req, res) => {
+    if (req.session.userId) {
+        return res.redirect("/search");
+    }
+
+    res.render("login", {
+        errors: [],
+        formData: {
+            username: ""
+        }
+    });
+});
+
+app.post(
+    "/login",
+    [
+        body("username")
+            .trim()
+            .notEmpty()
+            .withMessage("Username is required."),
+        body("password")
+            .notEmpty()
+            .withMessage("Password is required.")
+    ],
+    async (req, res) => {
+        const errors = validationResult(req);
+        const username = req.body.username || "";
+        const password = req.body.password || "";
+
+        if (!errors.isEmpty()) {
+            return res.status(400).render("login", {
+                errors: errors.array(),
+                formData: { username }
+            });
+        }
+
+        try {
+            const user = await findUserByUsername(username);
+
+            if (!user) {
+                return res.status(401).render("login", {
+                    errors: [{ msg: "Invalid username or password." }],
+                    formData: { username }
+                });
+            }
+
+            const passwordMatches = await bcrypt.compare(password, user.password_hash);
+
+            if (!passwordMatches) {
+                return res.status(401).render("login", {
+                    errors: [{ msg: "Invalid username or password." }],
+                    formData: { username }
+                });
+            }
+
+            req.session.userId = user.id;
+            req.session.username = user.username;
+
+            res.redirect("/search");
+        }
+        catch (err) {
+            console.error("Login error:", err);
+            res.status(500).render("login", {
+                errors: [{ msg: "Unable to log in right now." }],
+                formData: { username }
+            });
+        }
+    }
+);
+
+app.post("/logout", (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error("Logout error:", err);
+            return res.status(500).send("Unable to log out right now.");
+        }
+
+        res.clearCookie("connect.sid");
+        res.redirect("/");
+    });
+});
 
 app.get("/search", (req, res) => {
     res.render("search", {
