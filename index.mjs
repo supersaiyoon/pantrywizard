@@ -13,7 +13,6 @@ import { CUISINES, DIETS } from "./data/recipeFilters.mjs";
 // SETUP & CONFIGURATION
 // =====================
 
-const { query, body, validationResult } = await import("express-validator");
 const app = express();
 
 // For render
@@ -79,7 +78,7 @@ app.get("/about", (req, res) => {
     res.render("about");
 });
 
-app.get("/favorites", requireAuth, (req, res) => {
+app.get("/favorites", isAuthenticated, (req, res) => {
     res.render("favorites");
 });
 
@@ -97,66 +96,76 @@ app.get("/register", (req, res) => {
     });
 });
 
-app.post(
-    "/register",
-    [
-        body("username")
-            .trim()
-            .notEmpty()
-            .withMessage("Username is required.")
-            .isLength({ min: 3, max: 50 })
-            .withMessage("Username must be between 3 and 50 characters."),
-        body("password")
-            .notEmpty()
-            .withMessage("Password is required.")
-            .isLength({ min: 8 })
-            .withMessage("Password must be at least 8 characters long.")
-    ],
-    async (req, res) => {
-        const errors = validationResult(req);
-        const username = req.body.username || "";
-        const password = req.body.password || "";
+app.post("/register", async (req, res) => {
+    let username = req.body.username || "";
+    let password = req.body.password || "";
+    let errors = [];
 
-        if (!errors.isEmpty()) {
-            return res.status(400).render("register", {
-                errors: errors.array(),
-                successMessage: "",
-                formData: { username }
-            });
-        }
+    username = username.trim().toLowerCase();
 
-        try {
-            const existingUser = await findUserByUsername(username);
-
-            if (existingUser) {
-                return res.status(400).render("register", {
-                    errors: [{ msg: "That username is already taken." }],
-                    successMessage: "",
-                    formData: { username }
-                });
-            }
-
-            const passwordHash = await bcrypt.hash(password, saltRounds);
-            await createUser(username, passwordHash);
-
-            res.status(201).render("register", {
-                errors: [],
-                successMessage: "Account created successfully. You can log in next.",
-                formData: {
-                    username: ""
-                }
-            });
-        }
-        catch (err) {
-            console.error("Registration error:", err);
-            res.status(500).render("register", {
-                errors: [{ msg: "Unable to create account right now." }],
-                successMessage: "",
-                formData: { username }
-            });
-        }
+    if (username === "") {
+        errors.push({ msg: "Username is required." });
     }
-);
+
+    if (username.length > 0 && (username.length < 3 || username.length > 50)) {
+        errors.push({ msg: "Username must be between 3 and 50 characters." });
+    }
+
+    if (password === "") {
+        errors.push({ msg: "Password is required." });
+    }
+
+    if (password.length > 0 && password.length < 8) {
+        errors.push({ msg: "Password must be at least 8 characters long." });
+    }
+
+    if (errors.length > 0) {
+        return res.status(400).render("register", {
+            errors: errors,
+            successMessage: "",
+            formData: { username }
+        });
+    }
+
+    try {
+        let sql = `SELECT id
+                   FROM users
+                   WHERE username = ?`;
+
+        const [rows] = await pool.query(sql, [username]);
+
+        if (rows.length > 0) {
+            return res.status(400).render("register", {
+                errors: [{ msg: "That username is already taken." }],
+                successMessage: "",
+                formData: { username }
+            });
+        }
+
+        let passwordHash = await bcrypt.hash(password, saltRounds);
+
+        sql = `INSERT INTO users (username, password_hash)
+               VALUES (?, ?)`;
+
+        await pool.query(sql, [username, passwordHash]);
+
+        res.status(201).render("register", {
+            errors: [],
+            successMessage: "Account created successfully. You can log in next.",
+            formData: {
+                username: ""
+            }
+        });
+    }
+    catch (err) {
+        console.error("Registration error:", err);
+        res.status(500).render("register", {
+            errors: [{ msg: "Unable to create account right now." }],
+            successMessage: "",
+            formData: { username }
+        });
+    }
+});
 
 app.get("/login", (req, res) => {
     if (req.session.userId) {
@@ -165,74 +174,71 @@ app.get("/login", (req, res) => {
 
     res.render("login", {
         errors: [],
-        redirectTo: getSafeRedirectPath(req.query.redirect),
         formData: {
             username: ""
         }
     });
 });
 
-app.post(
-    "/login",
-    [
-        body("username")
-            .trim()
-            .notEmpty()
-            .withMessage("Username is required."),
-        body("password")
-            .notEmpty()
-            .withMessage("Password is required.")
-    ],
-    async (req, res) => {
-        const errors = validationResult(req);
-        const username = req.body.username || "";
-        const password = req.body.password || "";
-        const redirectTo = getSafeRedirectPath(req.body.redirect);
+app.post("/login", async (req, res) => {
+    let username = req.body.username || "";
+    let password = req.body.password || "";
+    let errors = [];
 
-        if (!errors.isEmpty()) {
-            return res.status(400).render("login", {
-                errors: errors.array(),
-                redirectTo,
-                formData: { username }
-            });
-        }
+    username = username.trim().toLowerCase();
 
-        try {
-            const user = await findUserByUsername(username);
-
-            if (!user) {
-                return res.status(401).render("login", {
-                    errors: [{ msg: "Invalid username or password." }],
-                    redirectTo,
-                    formData: { username }
-                });
-            }
-
-            const passwordMatches = await bcrypt.compare(password, user.password_hash);
-
-            if (!passwordMatches) {
-                return res.status(401).render("login", {
-                    errors: [{ msg: "Invalid username or password." }],
-                    redirectTo,
-                    formData: { username }
-                });
-            }
-
-            req.session.userId = user.id;
-            req.session.username = user.username;
-
-            res.redirect(redirectTo);
-        }
-        catch (err) {
-            console.error("Login error:", err);
-            res.status(500).render("login", {
-                errors: [{ msg: "Unable to log in right now." }],
-                redirectTo,
-                formData: { username }
-            });
-        }
+    if (username === "") {
+        errors.push({ msg: "Username is required." });
     }
-);
+
+    if (password === "") {
+        errors.push({ msg: "Password is required." });
+    }
+
+    if (errors.length > 0) {
+        return res.status(400).render("login", {
+            errors: errors,
+            formData: { username }
+        });
+    }
+
+    try {
+        let sql = `SELECT *
+                   FROM users
+                   WHERE username = ?`;
+
+        const [rows] = await pool.query(sql, [username]);
+
+        if (rows.length === 0) {
+            return res.status(401).render("login", {
+                errors: [{ msg: "Invalid username or password." }],
+                formData: { username }
+            });
+        }
+
+        let user = rows[0];
+        let match = await bcrypt.compare(password, user.password_hash);
+
+        if (!match) {
+            return res.status(401).render("login", {
+                errors: [{ msg: "Invalid username or password." }],
+                formData: { username }
+            });
+        }
+
+        req.session.userId = user.id;
+        req.session.username = user.username;
+
+        res.redirect("/search");
+    }
+    catch (err) {
+        console.error("Login error:", err);
+        res.status(500).render("login", {
+            errors: [{ msg: "Unable to log in right now." }],
+            formData: { username }
+        });
+    }
+});
 
 app.post("/logout", (req, res) => {
     req.session.destroy((err) => {
@@ -556,49 +562,10 @@ function isMealDbContinuation(segment) {
     return false;
 }
 
-function normalizeUsername(username) {
-    return username.trim().toLowerCase();
-}
-
-async function findUserByUsername(username) {
-    const normalizedUsername = normalizeUsername(username);
-    const [rows] = await pool.query(
-        `SELECT id, username, password_hash, created_at
-         FROM users
-         WHERE username = ?`,
-        [normalizedUsername]
-    );
-
-    return rows[0] || null;
-}
-
-async function createUser(username, passwordHash) {
-    const normalizedUsername = normalizeUsername(username);
-    const [result] = await pool.query(
-        `INSERT INTO users (username, password_hash)
-         VALUES (?, ?)`,
-        [normalizedUsername, passwordHash]
-    );
-
-    return {
-        id: result.insertId,
-        username: normalizedUsername
-    };
-}
-
-function requireAuth(req, res, next) {
+function isAuthenticated(req, res, next) {
     if (!req.session.userId) {
-        const redirectPath = encodeURIComponent(req.originalUrl || "/favorites");
-        return res.redirect(`/login?redirect=${redirectPath}`);
+        return res.redirect("/login");
     }
 
     next();
-}
-
-function getSafeRedirectPath(redirectPath) {
-    if (typeof redirectPath !== "string" || !redirectPath.startsWith("/") || redirectPath.startsWith("//")) {
-        return "/search";
-    }
-
-    return redirectPath;
 }
