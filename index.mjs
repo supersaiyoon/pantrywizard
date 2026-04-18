@@ -4,6 +4,7 @@
 
 import express from "express";
 import mysql from "mysql2/promise";
+import session from "express-session";
 import { CUISINES, DIETS } from "./data/recipeFilters.mjs";
 
 
@@ -30,6 +31,11 @@ app.use(express.static("public"));
 // API keys
 const spoonacularApiKey = process.env.SPOONACULAR_API_KEY;
 const theMealDbApiKey = process.env.THEMEALDB_API_KEY || "1";
+const sessionSecret = process.env.SESSION_SECRET;
+
+if (!sessionSecret) {
+    throw new Error("SESSION_SECRET is required. Add it to your .env file before starting the server.");
+}
 
 // API base URLs
 const spoonacularBaseUrl = "https://api.spoonacular.com/recipes";
@@ -37,6 +43,22 @@ const theMealDbBaseUrl = `https://www.themealdb.com/api/json/v1/${theMealDbApiKe
 
 //for Express to get values using POST method
 app.use(express.urlencoded({ extended: true }));
+app.use(session({
+    secret: sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 1000 * 60 * 60 * 24
+    }
+}));
+
+app.use((req, res, next) => {
+    res.locals.currentUser = req.session.username || null;
+    res.locals.isAuthenticated = Boolean(req.session.userId);
+    next();
+});
 
 //setting up database connection pool
 const pool = mysql.createPool(config);
