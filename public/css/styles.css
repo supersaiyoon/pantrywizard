@@ -45,3 +45,41 @@ footer{
 .body-div{
   padding: 12px;
 }
+
+.recipe {
+  border: 1px solid #d7d7cc;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+  background-color: #faf9f5;
+}
+
+.recipe img {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 10px;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.recipe-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.source-badge {
+  background-color: #dde9d5;
+  color: #23411f;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.source-details {
+  color: #47523f;
+  font-style: italic;
+}

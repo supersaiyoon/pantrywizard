@@ -29,11 +29,11 @@ app.use(express.static("public"));
 
 // API keys
 const spoonacularApiKey = process.env.SPOONACULAR_API_KEY;
-const theMealDbApiKey = process.env.THEMEALDB_API_KEY;
+const theMealDbApiKey = process.env.THEMEALDB_API_KEY || "1";
 
 // API base URLs
 const spoonacularBaseUrl = "https://api.spoonacular.com/recipes";
-const theMealDbSearchBaseUrl = `https://www.themealdb.com/api/json/v1/${theMealDbApiKey}`;
+const theMealDbBaseUrl = `https://www.themealdb.com/api/json/v1/${theMealDbApiKey}`;
 
 //for Express to get values using POST method
 app.use(express.urlencoded({ extended: true }));
@@ -96,6 +96,7 @@ app.get("/api/search/ingredients", async (req, res) => {
         }
 
         const cleanedIngredients = cleanedArr.join(",");
+        const isSingleIngredientSearch = cleanedArr.length === 1;
 
 
         const apiUrl = new URL(`${spoonacularBaseUrl}/complexSearch`);
@@ -153,6 +154,9 @@ app.get("/api/search/ingredients", async (req, res) => {
 
             let newRecipe = {
                 ...recipe,
+                source: "Spoonacular",
+                sourceDetails: "Matches your pantry ingredients and applies cuisine/diet filters.",
+                filtersApplied: true,
                 usedIngredients: usedIngredients,
                 missedIngredients: missedIngredients,
                 analyzedInstructions: analyzedInstructions,
@@ -161,6 +165,16 @@ app.get("/api/search/ingredients", async (req, res) => {
             };
 
             recipes.push(newRecipe);
+        }
+
+        if (isSingleIngredientSearch) {
+            // TheMealDB only supports ingredient filtering cleanly for a single ingredient,
+            // so merge those matches into response only for that case.
+            const mealDbRecipes = await fetchMealDbRecipesByIngredient(cleanedArr[0], {
+                hasFilters: Boolean(cuisine || diet)
+            });
+
+            recipes.push(...mealDbRecipes);
         }
 
         res.send(recipes);
@@ -187,3 +201,170 @@ app.get("/dbTest", async (req, res) => {
 app.listen(port, () => {
     console.log(`Server listening on port http://localhost:${port}`);
 });
+
+async function fetchMealDbRecipesByIngredient(ingredient, options = {}) {
+    const { hasFilters = false } = options;
+    const searchUrl = new URL(`${theMealDbBaseUrl}/filter.php`);
+    searchUrl.searchParams.set("i", ingredient);
+
+    try {
+        const response = await fetch(searchUrl);
+
+        if (!response.ok) {
+            console.error("TheMealDB ingredient search failed:", response.status);
+            return [];
+        }
+
+        const data = await response.json();
+        const meals = data.meals || [];
+
+        if (meals.length === 0) {
+            return [];
+        }
+
+        const detailedMeals = await Promise.all(
+            meals.slice(0, 10).map((meal) => fetchMealDbRecipeDetails(meal.idMeal))
+        );
+
+        return detailedMeals
+            .filter(Boolean)
+            .map((meal) => normalizeMealDbRecipe(meal, hasFilters));
+    }
+    catch (err) {
+        console.error("TheMealDB ingredient search error:", err);
+        return [];
+    }
+}
+
+async function fetchMealDbRecipeDetails(mealId) {
+    const lookupUrl = new URL(`${theMealDbBaseUrl}/lookup.php`);
+    lookupUrl.searchParams.set("i", mealId);
+
+    try {
+        const response = await fetch(lookupUrl);
+
+        if (!response.ok) {
+            console.error("TheMealDB lookup failed for meal:", mealId, response.status);
+            return null;
+        }
+
+        const data = await response.json();
+        return data.meals?.[0] || null;
+    }
+    catch (err) {
+        console.error("TheMealDB lookup error for meal:", mealId, err);
+        return null;
+    }
+}
+
+function normalizeMealDbRecipe(meal, hasFilters) {
+    const instructions = meal.strInstructions?.trim() || "";
+    // TheMealDB returns inconsistent instruction formatting, so try to clean it up.
+    const parsedSteps = parseMealDbInstructions(instructions);
+    const steps = parsedSteps.map((step) => ({ step }));
+
+    return {
+        id: meal.idMeal,
+        title: meal.strMeal,
+        image: meal.strMealThumb,
+        source: "TheMealDB",
+        sourceDetails: hasFilters
+            ? "Single-ingredient match from TheMealDB. Cuisine and diet filters do not apply."
+            : "Single-ingredient match from TheMealDB.",
+        filtersApplied: false,
+        category: meal.strCategory || null,
+        area: meal.strArea || null,
+        usedIngredients: [],
+        missedIngredients: [],
+        usedIngredientCount: null,
+        missedIngredientCount: null,
+        analyzedInstructions: steps.length > 0 ? [{ steps }] : [],
+        instructionsText: instructions
+    };
+}
+
+// TheMealDB cooking instructions can have inconsistent formatting, so clean it up for better display.
+function parseMealDbInstructions(instructionsText) {
+    if (!instructionsText) {
+        return [];
+    }
+
+    let normalizedText = instructionsText
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .replace(/\t/g, " ")
+        .replace(/\u00a0/g, " ")
+        .trim();
+
+    // Surface common inline step markers as individual lines before splitting.
+    normalizedText = normalizedText
+        .replace(/\s+(?=STEP\s*\d+\b)/gi, "\n")
+        .replace(/\s+(?=Step\s*\d+\b)/g, "\n")
+        .replace(/\s+(?=\d+\.\s+)/g, "\n");
+
+    const rawSegments = normalizedText
+        .split(/\n+/)
+        .map((segment) => cleanMealDbInstructionSegment(segment))
+        .filter(Boolean);
+
+    const steps = [];
+
+    for (const segment of rawSegments) {
+        const lastStep = steps[steps.length - 1];
+
+        if (isMealDbStepLabel(segment) && lastStep) {
+            continue;
+        }
+
+        // Some MealDB records mix numbered steps with trailing continuation lines,
+        // so attach obviously incomplete fragments to the previous instruction.
+        if (isMealDbContinuation(segment) && lastStep) {
+            steps[steps.length - 1] = `${lastStep} ${segment}`.trim();
+            continue;
+        }
+
+        steps.push(segment);
+    }
+
+    return steps;
+}
+
+// TheMealDB instructions can have inconsistent formatting, so try to clean up common issues for better display.
+function cleanMealDbInstructionSegment(segment) {
+    let cleanedSegment = segment.trim();
+
+    if (!cleanedSegment) {
+        return "";
+    }
+
+    cleanedSegment = cleanedSegment
+        .replace(/^(\d+\.\s*)+/, "")
+        .replace(/^step\s*\d+\s*[:-]?\s*/i, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    return cleanedSegment;
+}
+
+// TheMealDB often includes "Step X" labels in instructions, 
+// so identify them to avoid displaying as separate steps.
+function isMealDbStepLabel(segment) {
+    return /^step\s*\d+$/i.test(segment);
+}
+
+// Try to identify if TheMealDB instruction segment is likely a continuation of the previous step.
+function isMealDbContinuation(segment) {
+    if (!segment) {
+        return false;
+    }
+
+    if (/^[a-z(]/.test(segment)) {
+        return true;
+    }
+
+    if (/^(then|add|cook|stir|mix|put|pour|bring|reduce|remove|serve)\b/i.test(segment)) {
+        return true;
+    }
+
+    return false;
+}

@@ -15,7 +15,11 @@ DB_HOST=
 DB_USER=
 DB_PASSWORD=
 DB_NAME=
+SPOONACULAR_API_KEY=
+THEMEALDB_API_KEY=1
 ```
+
+`THEMEALDB_API_KEY=1` uses TheMealDB public test key. You can keep that value unless your team has a different key to use.
 
 To test the database connection go to: http://localhost:4000/dbtest
 
