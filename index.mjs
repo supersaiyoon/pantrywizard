@@ -4,6 +4,7 @@
 
 import express from "express";
 import mysql from "mysql2/promise";
+import bcrypt from "bcrypt";
 import session from "express-session";
 import { CUISINES, DIETS } from "./data/recipeFilters.mjs";
 
@@ -32,6 +33,7 @@ app.use(express.static("public"));
 const spoonacularApiKey = process.env.SPOONACULAR_API_KEY;
 const theMealDbApiKey = process.env.THEMEALDB_API_KEY || "1";
 const sessionSecret = process.env.SESSION_SECRET;
+const saltRounds = 10;
 
 if (!sessionSecret) {
     throw new Error("SESSION_SECRET is required. Add it to your .env file before starting the server.");
@@ -80,6 +82,77 @@ app.get("/about", (req, res) => {
 app.get("/favorites", (req, res) => {
     res.render("favorites");
 });
+
+app.get("/register", (req, res) => {
+    res.render("register", {
+        errors: [],
+        successMessage: "",
+        formData: {
+            username: ""
+        }
+    });
+});
+
+app.post(
+    "/register",
+    [
+        body("username")
+            .trim()
+            .notEmpty()
+            .withMessage("Username is required.")
+            .isLength({ min: 3, max: 50 })
+            .withMessage("Username must be between 3 and 50 characters."),
+        body("password")
+            .notEmpty()
+            .withMessage("Password is required.")
+            .isLength({ min: 8 })
+            .withMessage("Password must be at least 8 characters long.")
+    ],
+    async (req, res) => {
+        const errors = validationResult(req);
+        const username = req.body.username || "";
+        const password = req.body.password || "";
+
+        if (!errors.isEmpty()) {
+            return res.status(400).render("register", {
+                errors: errors.array(),
+                successMessage: "",
+                formData: { username }
+            });
+        }
+
+        try {
+            const existingUser = await findUserByUsername(username);
+
+            if (existingUser) {
+                return res.status(400).render("register", {
+                    errors: [{ msg: "That username is already taken." }],
+                    successMessage: "",
+                    formData: { username }
+                });
+            }
+
+            const passwordHash = await bcrypt.hash(password, saltRounds);
+            await createUser(username, passwordHash);
+
+            res.status(201).render("register", {
+                errors: [],
+                successMessage: "Account created successfully. You can log in next.",
+                formData: {
+                    username: ""
+                }
+            });
+        }
+        catch (err) {
+            console.error("Registration error:", err);
+            res.status(500).render("register", {
+                errors: [{ msg: "Unable to create account right now." }],
+                successMessage: "",
+                formData: { username }
+            });
+        }
+    }
+);
 
 app.get("/search", (req, res) => {
     res.render("search", {
