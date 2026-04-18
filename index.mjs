@@ -79,7 +79,7 @@ app.get("/about", (req, res) => {
     res.render("about");
 });
 
-app.get("/favorites", (req, res) => {
+app.get("/favorites", requireAuth, (req, res) => {
     res.render("favorites");
 });
 
@@ -165,6 +165,7 @@ app.get("/login", (req, res) => {
 
     res.render("login", {
         errors: [],
+        redirectTo: getSafeRedirectPath(req.query.redirect),
         formData: {
             username: ""
         }
@@ -186,10 +187,12 @@ app.post(
         const errors = validationResult(req);
         const username = req.body.username || "";
         const password = req.body.password || "";
+        const redirectTo = getSafeRedirectPath(req.body.redirect);
 
         if (!errors.isEmpty()) {
             return res.status(400).render("login", {
                 errors: errors.array(),
+                redirectTo,
                 formData: { username }
             });
         }
@@ -200,6 +203,7 @@ app.post(
             if (!user) {
                 return res.status(401).render("login", {
                     errors: [{ msg: "Invalid username or password." }],
+                    redirectTo,
                     formData: { username }
                 });
             }
@@ -209,6 +213,7 @@ app.post(
             if (!passwordMatches) {
                 return res.status(401).render("login", {
                     errors: [{ msg: "Invalid username or password." }],
+                    redirectTo,
                     formData: { username }
                 });
             }
@@ -216,12 +221,13 @@ app.post(
             req.session.userId = user.id;
             req.session.username = user.username;
 
-            res.redirect("/search");
+            res.redirect(redirectTo);
         }
         catch (err) {
             console.error("Login error:", err);
             res.status(500).render("login", {
                 errors: [{ msg: "Unable to log in right now." }],
+                redirectTo,
                 formData: { username }
             });
         }
@@ -578,4 +584,21 @@ async function createUser(username, passwordHash) {
         id: result.insertId,
         username: normalizedUsername
     };
+}
+
+function requireAuth(req, res, next) {
+    if (!req.session.userId) {
+        const redirectPath = encodeURIComponent(req.originalUrl || "/favorites");
+        return res.redirect(`/login?redirect=${redirectPath}`);
+    }
+
+    next();
+}
+
+function getSafeRedirectPath(redirectPath) {
+    if (typeof redirectPath !== "string" || !redirectPath.startsWith("/") || redirectPath.startsWith("//")) {
+        return "/search";
+    }
+
+    return redirectPath;
 }
