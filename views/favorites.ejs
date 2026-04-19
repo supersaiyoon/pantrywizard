@@ -1,79 +1,34 @@
-<%- include('partials/head') %>
+<%- include('partials/head', { pageTitle: 'Favorites | PantryWizard' }) %>
 
 <body>
     <%- include('partials/nav') %>
 
-    <main class="page-shell">
-        <section class="page-hero compact-hero">
-            <p class="eyebrow">Saved recipes</p>
+    <main class="body-div page-container">
+        <section class="page-header">
             <h1>Favorites</h1>
-            <p>
-                Your saved recipes and notes will appear here, <strong><%= currentUser %></strong>.
-            </p>
+            <p>Your saved recipes and future likes will live here, <strong><%= currentUser %></strong>.</p>
         </section>
 
-        <section class="section">
+        <% if (typeof favorites !== 'undefined' && favorites.length > 0) { %>
+            <div class="recipe-grid">
+                <% favorites.forEach(recipe => { %>
+                    <div class="recipe-card">
+                        <img src="<%= recipe.image_url || '/img/placeholder.jpg' %>" alt="<%= recipe.recipe_title %>">
+                        <h3><%= recipe.recipe_title %></h3>
+                        <p><strong>Meal Type:</strong> <%= recipe.meal_type || 'N/A' %></p>
+                        <p><strong>Diet:</strong> <%= recipe.diet_type || 'N/A' %></p>
+                        <p><strong>Notes:</strong> <%= recipe.notes || 'No notes yet.' %></p>
+                    </div>
+                <% }) %>
+            </div>
+        <% } else { %>
             <div class="empty-state">
-                <img src="/img/placeholder.jpg" alt="Recipe placeholder image">
-                <h2>No favorites saved yet</h2>
-                <p>
-                    This page layout is ready for the favorites database feature. Once saving is connected,
-                    saved recipes can appear here as cards with notes and edit/remove controls.
-                </p>
-                <a href="/search" class="btn btn-primary">Browse Recipes</a>
+                <p>No favorite recipes saved yet.</p>
+                <a href="/search" class="btn btn-primary">Find Recipes</a>
             </div>
-        </section>
-
-        <section class="section">
-            <div class="section-heading">
-                <p class="eyebrow">Future layout</p>
-                <h2>How saved recipes will appear</h2>
-                <p>This preview keeps your page finished now without requiring the backend favorites system yet.</p>
-            </div>
-
-            <div class="favorites-preview">
-                <article class="favorite-row">
-                    <img src="/img/placeholder.jpg" alt="Recipe placeholder image">
-                    <div class="favorite-content">
-                        <div class="favorite-top">
-                            <div>
-                                <h3>Veggie Pasta</h3>
-                                <p class="muted-text">Category: Dinner</p>
-                            </div>
-                            <div class="favorite-actions">
-                                <button class="btn btn-small btn-secondary" type="button" disabled>Edit</button>
-                                <button class="btn btn-small btn-danger" type="button" disabled>Remove</button>
-                            </div>
-                        </div>
-
-                        <label class="notes-label" for="sample-note-1">Personal note</label>
-                        <textarea id="sample-note-1" rows="3" disabled>Add extra garlic next time.</textarea>
-                    </div>
-                </article>
-
-                <article class="favorite-row">
-                    <img src="/img/placeholder.jpg" alt="Recipe placeholder image">
-                    <div class="favorite-content">
-                        <div class="favorite-top">
-                            <div>
-                                <h3>Grilled Chicken</h3>
-                                <p class="muted-text">Category: High Protein</p>
-                            </div>
-                            <div class="favorite-actions">
-                                <button class="btn btn-small btn-secondary" type="button" disabled>Edit</button>
-                                <button class="btn btn-small btn-danger" type="button" disabled>Remove</button>
-                            </div>
-                        </div>
-
-                        <label class="notes-label" for="sample-note-2">Personal note</label>
-                        <textarea id="sample-note-2" rows="3" disabled>Try with rice and vegetables.</textarea>
-                    </div>
-                </article>
-            </div>
-        </section>
+        <% } %>
     </main>
 
     <%- include('partials/footer') %>
 </body>
-
 </html>

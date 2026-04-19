@@ -82,6 +82,22 @@ app.get("/favorites", isAuthenticated, (req, res) => {
     res.render("favorites");
 });
 
+app.get("/recipe/:id", async (req, res) => {
+    const recipe = {
+        id: req.params.id,
+        title: "Recipe Details",
+        image: "/img/placeholder.jpg",
+        ingredients: ["Ingredient 1", "Ingredient 2"],
+        instructions: ["Step 1", "Step 2"],
+        category: "Main Course",
+        area: "N/A"
+    };
+
+    const averageRating = "N/A";
+
+    res.render("recipe-detail", { recipe, averageRating });
+});
+
 app.get("/register", (req, res) => {
     if (req.session.userId) {
         return res.redirect("/search");

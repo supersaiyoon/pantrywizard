@@ -2,6 +2,15 @@ const searchInput = document.getElementById("searchInput");
 const searchButton = document.getElementById("searchButton");
 const searchResults = document.getElementById("searchResults");
 
+window.addEventListener("DOMContentLoaded", () => {
+    if (searchInput) {
+        const savedIngredients = localStorage.getItem("lastIngredients");
+        if (savedIngredients) {
+            searchInput.value = savedIngredients;
+        }
+    }
+});
+
 // Ensure elements exist before adding event listeners
 if (searchButton && searchInput && searchResults) {
     searchButton.addEventListener("click", searchRecipes);
@@ -16,6 +25,7 @@ if (searchButton && searchInput && searchResults) {
 
 async function searchRecipes() {
     const ingredients = searchInput.value.trim();
+    localStorage.setItem("lastIngredients", ingredients);
 
     // Get selected cuisines and diets from checkboxes AFTER user clicks search
     const cuisineCheckboxes = document.querySelectorAll("input[name='cuisine']:checked");

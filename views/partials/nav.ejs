@@ -1,22 +1,25 @@
-<div id ="nav">
-  <a href="/" class="logo">
-     <span style="color: #e4633c">Pantry</span><span style="color: #47ab8d">Wizard</span>
-  </a>
-  
-  <div class="nav-links">
-    <a href="/search"> Search </a>
-    <a href="/favorites"> Favorites </a>
-    <a href="/about"> About </a>
+<header class="site-header">
+  <div id="nav">
+    <a href="/" class="logo">
+      <span style="color: #e4633c">Pantry</span><span style="color: #47ab8d">Wizard</span>
+    </a>
 
-    <% if (isAuthenticated) { %>
-      <span class="nav-user">Signed in as <%= currentUser %></span>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/search">Search</a>
+      <a href="/favorites">Favorites</a>
+      <a href="/about">About</a>
 
-      <form method="POST" action="/logout" class="nav-logout-form">
-        <button type="submit" class="nav-logout-button">Logout</button>
-      </form>
-    <% } else { %>
-      <a href="/login"> Login </a>
-      <a href="/register"> Register </a>
-    <% } %>
+      <% if (isAuthenticated) { %>
+        <span class="nav-user">Signed in as <%= currentUser %></span>
+
+        <form method="POST" action="/logout" class="nav-logout-form">
+          <button type="submit" class="nav-logout-button">Logout</button>
+        </form>
+      <% } else { %>
+        <a href="/login">Login</a>
+        <a href="/register">Register</a>
+      <% } %>
+    </div>
   </div>
-</div>
+</header>
