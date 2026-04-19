@@ -3,9 +3,107 @@
 <body>
     <%- include('partials/nav') %>
 
-    <div class="body-div">
-    <h1>index</h1>
-    </div>
+    <main class="page-shell">
+        <section class="hero">
+            <div class="hero-copy">
+                <p class="eyebrow">Cook with what you already have</p>
+                <h1>Welcome to PantryWizard</h1>
+                <p class="hero-text">
+                    PantryWizard helps you discover recipes based on ingredients in your kitchen.
+                    Search by ingredients, narrow results with filters, and save recipes you want to try later.
+                </p>
+
+                <div class="hero-actions">
+                    <a href="/search" class="btn btn-primary">Start Searching</a>
+                    <a href="/about" class="btn btn-secondary">How It Works</a>
+                </div>
+            </div>
+
+            <div class="hero-card">
+                <h2>Why use PantryWizard?</h2>
+                <ul class="feature-list">
+                    <li>Search recipes by ingredients you already have</li>
+                    <li>Use cuisine and diet filters to narrow results</li>
+                    <li>Save favorite meals for quick access later</li>
+                    <li>Keep your recipe search simple and organized</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-heading">
+                <p class="eyebrow">Featured ideas</p>
+                <h2>Recipe inspiration</h2>
+                <p>These sample cards match the style planned for the project and can stay until live favorites and ratings are finished.</p>
+            </div>
+
+            <div class="card-grid">
+                <article class="recipe-card featured-card">
+                    <img src="/img/placeholder.jpg" alt="Featured recipe placeholder image">
+                    <div class="recipe-card-body">
+                        <span class="pill">Quick Meal</span>
+                        <h3>Veggie Pasta</h3>
+                        <p>A simple weeknight option using pantry basics and fresh vegetables.</p>
+                        <div class="card-actions">
+                            <a href="/search" class="btn btn-small btn-primary">Find Similar Recipes</a>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="recipe-card featured-card">
+                    <img src="/img/placeholder.jpg" alt="Featured recipe placeholder image">
+                    <div class="recipe-card-body">
+                        <span class="pill">Healthy</span>
+                        <h3>Avocado Salad</h3>
+                        <p>A light and easy recipe idea that works well for lunch or dinner.</p>
+                        <div class="card-actions">
+                            <a href="/search" class="btn btn-small btn-primary">Find Similar Recipes</a>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="recipe-card featured-card">
+                    <img src="/img/placeholder.jpg" alt="Featured recipe placeholder image">
+                    <div class="recipe-card-body">
+                        <span class="pill">Protein</span>
+                        <h3>Grilled Chicken</h3>
+                        <p>Great for users who want fast meal prep with flexible side dishes.</p>
+                        <div class="card-actions">
+                            <a href="/search" class="btn btn-small btn-primary">Find Similar Recipes</a>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="section how-it-works">
+            <div class="section-heading">
+                <p class="eyebrow">Simple workflow</p>
+                <h2>How PantryWizard works</h2>
+            </div>
+
+            <div class="steps-grid">
+                <article class="info-card">
+                    <span class="step-number">1</span>
+                    <h3>Enter ingredients</h3>
+                    <p>Type in ingredients you already have at home, such as chicken, rice, pasta, or vegetables.</p>
+                </article>
+
+                <article class="info-card">
+                    <span class="step-number">2</span>
+                    <h3>Apply filters</h3>
+                    <p>Use cuisine and dietary filters to narrow down recipe results to better match your needs.</p>
+                </article>
+
+                <article class="info-card">
+                    <span class="step-number">3</span>
+                    <h3>Browse and save</h3>
+                    <p>Review recipe cards, compare options, and save recipes you want to remember for later.</p>
+                </article>
+            </div>
+        </section>
+    </main>
+
     <%- include('partials/footer') %>
 </body>
 
