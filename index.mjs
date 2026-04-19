@@ -80,38 +80,49 @@ app.get("/about", (req, res) => {
 
 app.get("/favorites", isAuthenticated, async (req, res) => {
     try {
-        const sql = `SELECT *
-                     FROM favorites
-                     WHERE user_name = ?
-                     ORDER BY updated_at DESC, created_at DESC`;
-
-        const [favorites] = await pool.query(sql, [req.session.username]);
+        const [favorites] = await pool.query(
+            "SELECT * FROM favorites WHERE user_name=?",
+            [req.session.username]
+        );
 
         res.render("favorites", { favorites });
-    }
-    catch (err) {
-        console.error("Favorites page error:", err);
-        res.status(500).render("favorites", { favorites: [] });
+    } catch (err) {
+        console.error(err);
+        res.render("favorites", { favorites: [] });
     }
 });
 
 app.get("/recipe/:id", async (req, res) => {
     const recipeId = req.params.id;
-    const source = normalizeRecipeSource(req.query.source);
 
     try {
-        const recipe = await fetchRecipeDetails(recipeId, source);
-        const averageRating = await getAverageRating(recipeId);
+        const [avg] = await pool.query(
+            "SELECT ROUND(AVG(rating_value),1) AS avg FROM ratings WHERE recipe_id=?",
+            [recipeId]
+        );
 
-        let userRating = null;
-        let favorite = null;
+        const [userRating] = await pool.query(
+            "SELECT rating_value FROM ratings WHERE user_name=? AND recipe_id=?",
+            [req.session.username, recipeId]
+        );
 
-        if (req.session.username) {
-            [userRating, favorite] = await Promise.all([
-                getUserRating(req.session.username, recipeId),
-                getFavorite(req.session.username, recipeId)
-            ]);
-        }
+        const [favorite] = await pool.query(
+            "SELECT * FROM favorites WHERE user_name=? AND recipe_id=?",
+            [req.session.username, recipeId]
+        );
+
+        res.render("recipe-detail", {
+            recipeId,
+            averageRating: avg[0].avg,
+            userRating: userRating[0]?.rating_value || null,
+            favorite: favorite[0] || null
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.send("Error loading recipe");
+    }
+});
 
         res.render("recipe-detail", {
             recipe,
@@ -417,6 +428,78 @@ app.post("/ratings", isAuthenticated, async (req, res) => {
     }
 });
 
+// =====================
+// FAVORITES + RATINGS 
+// =====================
+
+app.post("/favorites", isAuthenticated, async (req, res) => {
+    const recipeId = req.body.recipeId;
+    const recipeTitle = req.body.recipeTitle;
+    const imageUrl = req.body.imageUrl;
+    const notes = req.body.notes;
+
+    try {
+        const sql = `
+            INSERT INTO favorites (user_name, recipe_id, recipe_title, image_url, notes)
+            VALUES (?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                notes = VALUES(notes),
+                updated_at = CURRENT_TIMESTAMP
+        `;
+
+        await pool.query(sql, [
+            req.session.username,
+            recipeId,
+            recipeTitle,
+            imageUrl,
+            notes
+        ]);
+
+        res.redirect("/favorites");
+    } catch (err) {
+        console.error(err);
+        res.send("Error saving favorite");
+    }
+});
+
+app.post("/favorites/:id/delete", isAuthenticated, async (req, res) => {
+    try {
+        await pool.query(
+            "DELETE FROM favorites WHERE user_name=? AND recipe_id=?",
+            [req.session.username, req.params.id]
+        );
+
+        res.redirect("/favorites");
+    } catch (err) {
+        console.error(err);
+        res.send("Error deleting favorite");
+    }
+});
+
+app.post("/ratings", isAuthenticated, async (req, res) => {
+    const { recipeId, ratingValue } = req.body;
+
+    try {
+        const sql = `
+            INSERT INTO ratings (user_name, recipe_id, rating_value)
+            VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                rating_value = VALUES(rating_value),
+                updated_at = CURRENT_TIMESTAMP
+        `;
+
+        await pool.query(sql, [
+            req.session.username,
+            recipeId,
+            ratingValue
+        ]);
+
+        res.redirect(`/recipe/${recipeId}`);
+    } catch (err) {
+        console.error(err);
+        res.send("Error saving rating");
+    }
+});
 
 // =====================
 // API ENDPOINTS
