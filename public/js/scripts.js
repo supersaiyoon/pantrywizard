@@ -94,6 +94,7 @@ async function searchRecipes() {
                 ${formatSourceDetails(recipe)}
                 <p><strong>Instructions:</strong></p>
                 ${formatInstructions(recipe)}
+                <a href="/recipe/${recipe.id}">View Details</a>
             `;
             searchResults.appendChild(recipeDiv);
         }
