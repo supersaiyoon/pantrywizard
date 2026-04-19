@@ -1,0 +1,148 @@
+
+/* --------- Nav --------- */
+body{
+  margin: 0%;
+  border:8px;
+}
+#nav{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #e5e5dc;
+  max-width: 100%;
+  height:100px;
+}
+
+#nav a, nav a:hover, nav a:visited, nav a:active{
+  text-decoration: none;
+  color: black;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 32px;
+}
+
+.logo{
+  font-size: 32px;
+  font-weight: bold;
+}
+.nav-links {
+  display: flex;
+  height: 100%;
+  font-size: 18px;
+  font-weight: 500;
+  align-items: center;
+}
+
+.nav-user {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 15px;
+}
+
+.nav-logout-form {
+  height: 100%;
+}
+
+.nav-logout-button {
+  border: none;
+  background: transparent;
+  color: black;
+  height: 100%;
+  padding: 0 32px;
+  cursor: pointer;
+  font: inherit;
+}
+
+/* ---------------------- */
+/* --------- footer --------- */
+footer{
+  text-align: center;
+  background-color: #e5e5dc;
+  bottom: auto;
+}
+/* ---------------------- */
+/* --------- General body div --------- */
+.body-div{
+  padding: 12px;
+}
+
+.recipe {
+  border: 1px solid #d7d7cc;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+  background-color: #faf9f5;
+}
+
+.recipe img {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 10px;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.recipe-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.source-badge {
+  background-color: #dde9d5;
+  color: #23411f;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.source-details {
+  color: #47523f;
+  font-style: italic;
+}
+
+.auth-form {
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.auth-form input,
+.auth-form button {
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.auth-form button {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.form-errors,
+.form-success {
+  max-width: 420px;
+  padding: 12px;
+  margin-top: 16px;
+  border-radius: 8px;
+}
+
+.form-errors {
+  background-color: #f8d7da;
+  color: #842029;
+}
+
+.form-success {
+  background-color: #d1e7dd;
+  color: #0f5132;
+}
+
+.auth-helper-text {
+  margin-top: 12px;
+}
