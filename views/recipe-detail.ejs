@@ -1,0 +1,59 @@
+<%- include('partials/head', { pageTitle: 'Recipe Details | PantryWizard' }) %>
+
+<body>
+    <%- include('partials/nav') %>
+
+    <main class="body-div page-container">
+        <section class="page-header">
+            <h1><%= recipe.title %></h1>
+        </section>
+
+        <div class="detail-layout">
+            <div class="detail-main">
+                <img
+                    src="<%= recipe.image || '/img/placeholder.jpg' %>"
+                    alt="<%= recipe.title %>"
+                    class="detail-image"
+                >
+
+                <section class="info-section">
+                    <h2>Ingredients</h2>
+                    <% if (recipe.ingredients && recipe.ingredients.length > 0) { %>
+                        <ul>
+                            <% recipe.ingredients.forEach(ingredient => { %>
+                                <li><%= ingredient %></li>
+                            <% }) %>
+                        </ul>
+                    <% } else { %>
+                        <p>No ingredients available.</p>
+                    <% } %>
+                </section>
+
+                <section class="info-section">
+                    <h2>Instructions</h2>
+                    <% if (recipe.instructions && recipe.instructions.length > 0) { %>
+                        <ol>
+                            <% recipe.instructions.forEach(step => { %>
+                                <li><%= step %></li>
+                            <% }) %>
+                        </ol>
+                    <% } else { %>
+                        <p>No instructions available.</p>
+                    <% } %>
+                </section>
+            </div>
+
+            <aside class="detail-side">
+                <section class="info-section">
+                    <h2>Recipe Info</h2>
+                    <p><strong>Category:</strong> <%= recipe.category || 'N/A' %></p>
+                    <p><strong>Area:</strong> <%= recipe.area || 'N/A' %></p>
+                    <p><strong>Average Rating:</strong> <%= averageRating || 'No ratings yet' %></p>
+                </section>
+            </aside>
+        </div>
+    </main>
+
+    <%- include('partials/footer') %>
+</body>
+</html>
