@@ -1,85 +1,37 @@
-<%- include('partials/head') %>
+<%- include('partials/head', { pageTitle: 'About | PantryWizard' }) %>
 
 <body>
     <%- include('partials/nav') %>
 
-    <main class="page-shell">
-        <section class="page-hero compact-hero">
-            <p class="eyebrow">About PantryWizard</p>
-            <h1>About / Help</h1>
+    <main class="body-div page-container">
+        <section class="page-header">
+            <h1>About PantryWizard</h1>
             <p>
-                PantryWizard is a recipe discovery web app that helps users decide what to cook based on ingredients they already have.
+                PantryWizard is a recipe discovery app that helps users find meals based on
+                ingredients they already have at home.
             </p>
         </section>
 
-        <section class="section two-column">
-            <article class="info-card">
-                <h2>What PantryWizard does</h2>
-                <p>
-                    PantryWizard helps users search for recipes using ingredients on hand, then narrow those results using filters such as cuisine and diet.
-                    The goal is to make meal planning quicker, easier, and more practical.
-                </p>
-                <p>
-                    The app is designed for busy users, beginner cooks, college students, and anyone who wants simple meal ideas without wasting ingredients.
-                </p>
-            </article>
-
-            <article class="info-card">
-                <h2>Who it is for</h2>
-                <ul class="feature-list">
-                    <li>College students looking for easy meal ideas</li>
-                    <li>Busy users trying to cook quickly</li>
-                    <li>Beginner cooks who want simple guidance</li>
-                    <li>Users with dietary preferences or restrictions</li>
-                </ul>
-            </article>
+        <section class="info-section">
+            <h2>How to Use PantryWizard</h2>
+            <ol>
+                <li>Enter one or more ingredients you already have.</li>
+                <li>Select cuisine or dietary filters if needed.</li>
+                <li>Search for matching recipes.</li>
+                <li>Save recipes to your favorites for later.</li>
+                <li>Rate recipes and keep personal notes.</li>
+            </ol>
         </section>
 
-        <section class="section">
-            <div class="section-heading">
-                <p class="eyebrow">Instructions</p>
-                <h2>How to use the app</h2>
-            </div>
-
-            <div class="steps-grid">
-                <article class="info-card">
-                    <span class="step-number">1</span>
-                    <h3>Search ingredients</h3>
-                    <p>Go to the Search page and enter one or more ingredients you already have in your pantry or fridge.</p>
-                </article>
-
-                <article class="info-card">
-                    <span class="step-number">2</span>
-                    <h3>Choose filters</h3>
-                    <p>Select cuisine and diet preferences to narrow your results and find better recipe matches.</p>
-                </article>
-
-                <article class="info-card">
-                    <span class="step-number">3</span>
-                    <h3>Review recipes</h3>
-                    <p>Look through the returned recipe cards to compare cooking time, ingredients used, and recipe details.</p>
-                </article>
-
-                <article class="info-card">
-                    <span class="step-number">4</span>
-                    <h3>Save favorites later</h3>
-                    <p>Once the favorites feature is connected, users will be able to save meals and add notes for future use.</p>
-                </article>
-            </div>
-        </section>
-
-        <section class="section">
-            <div class="notice-card">
-                <h2>Project status</h2>
-                <p>
-                    This page is fully styled and complete for the UI portion of the assignment. Dynamic favorites, notes, ratings,
-                    and the final recipe detail route can be connected later without redesigning the page layout.
-                </p>
-            </div>
+        <section class="info-section">
+            <h2>Why PantryWizard?</h2>
+            <p>
+                PantryWizard helps reduce food waste, saves time when choosing meals,
+                and gives users an easier way to cook with ingredients they already own.
+            </p>
         </section>
     </main>
 
     <%- include('partials/footer') %>
 </body>
-
 </html>
