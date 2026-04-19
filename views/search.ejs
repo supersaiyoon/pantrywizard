@@ -1,40 +1,56 @@
-<%- include('partials/head') %>
+<%- include('partials/head', { pageTitle: 'Search | PantryWizard' }) %>
 
 <body>
     <%- include('partials/nav') %>
 
-    <div class="body-div">
-        <h1>Recipe Search</h1>
+    <main class="body-div page-container">
+        <section class="page-header">
+            <h1>Recipe Search</h1>
+            <p>Search recipes by ingredients and refine your results with filters.</p>
+        </section>
 
-        <div class="search-container">
-            <input type="text"
-                   id="searchInput"
-                   placeholder="Enter ingredients like chicken, rice, etc."
-            >
-        </div>
+        <section class="search-panel">
+            <div class="search-container">
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Enter ingredients like chicken, rice, etc."
+                >
+                <button id="searchButton" class="btn btn-primary">Search</button>
+            </div>
 
-        <div class="filter-group">
-            <h3>Cuisine</h3>
+            <div class="filters-layout">
+                <div class="filter-group">
+                    <h3>Cuisine</h3>
+                    <% for (let cuisine of cuisines) { %>
+                        <label class="filter-option">
+                            <input type="checkbox" name="cuisine" value="<%= cuisine %>">
+                            <%= cuisine %>
+                        </label>
+                    <% } %>
+                </div>
 
-            <% for (let cuisine of cuisines) { %>
-                <label>
-                    <input type="checkbox" name="cuisine" value="<%= cuisine %>">
-                    <%= cuisine %>
-                </label>
-            <% } %>
-        </div>
+                <div class="filter-group">
+                    <h3>Diet</h3>
+                    <% for (let diet of diets) { %>
+                        <label class="filter-option">
+                            <input type="checkbox" name="diet" value="<%= diet %>">
+                            <%= diet %>
+                        </label>
+                    <% } %>
+                </div>
+            </div>
+        </section>
 
-        <div class="filter-group">
-            <h3>Diet</h3>
+        <section>
+            <h2>Results</h2>
+            <div id="searchResults" class="search-results"></div>
+        </section>
+    </main>
 
-            <% for (let diet of diets) { %>
-                <label>
-                    <input type="checkbox" name="diet" value="<%= diet %>">
-                    <%= diet %>
-                </label>
-            <% } %>
-        </div>
-
+    <%- include('partials/footer') %>
+</body>
+</html>
         <button id="searchButton">Search</button>
 
         <div id="searchResults" class="search-results"></div>
