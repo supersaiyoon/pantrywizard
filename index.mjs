@@ -78,20 +78,71 @@ app.get("/about", (req, res) => {
     res.render("about");
 });
 
-app.get("/favorites", isAuthenticated, (req, res) => {
-    res.render("favorites");
+app.get("/favorites", isAuthenticated, async (req, res) => {
+    try {
+        const sql = `SELECT *
+                     FROM favorites
+                     WHERE user_name = ?
+                     ORDER BY updated_at DESC, created_at DESC`;
+
+        const [favorites] = await pool.query(sql, [req.session.username]);
+
+        res.render("favorites", { favorites });
+    }
+    catch (err) {
+        console.error("Favorites page error:", err);
+        res.status(500).render("favorites", { favorites: [] });
+    }
 });
 
 app.get("/recipe/:id", async (req, res) => {
-    const recipe = {
-        id: req.params.id,
-        title: "Recipe Details",
-        image: "/img/placeholder.jpg",
-        ingredients: ["Ingredient 1", "Ingredient 2"],
-        instructions: ["Step 1", "Step 2"],
-        category: "Main Course",
-        area: "N/A"
-    };
+    const recipeId = req.params.id;
+    const source = normalizeRecipeSource(req.query.source);
+
+    try {
+        const recipe = await fetchRecipeDetails(recipeId, source);
+        const averageRating = await getAverageRating(recipeId);
+
+        let userRating = null;
+        let favorite = null;
+
+        if (req.session.username) {
+            [userRating, favorite] = await Promise.all([
+                getUserRating(req.session.username, recipeId),
+                getFavorite(req.session.username, recipeId)
+            ]);
+        }
+
+        res.render("recipe-detail", {
+            recipe,
+            averageRating,
+            userRating,
+            favorite,
+            source
+        });
+    }
+    catch (err) {
+        console.error("Recipe detail error:", err);
+        res.status(500).render("recipe-detail", {
+            recipe: {
+                id: recipeId,
+                title: "Recipe Details",
+                image: "/img/placeholder.jpg",
+                ingredients: [],
+                instructions: [],
+                category: "N/A",
+                area: "N/A",
+                mealType: "",
+                dietType: "",
+                source: source === "mealdb" ? "TheMealDB" : "Spoonacular"
+            },
+            averageRating: null,
+            userRating: null,
+            favorite: null,
+            source
+        });
+    }
+});
 
     const averageRating = "N/A";
 
@@ -275,6 +326,97 @@ app.get("/search", (req, res) => {
     });
 });
 
+app.post("/favorites", isAuthenticated, async (req, res) => {
+    const source = normalizeRecipeSource(req.body.source);
+    const recipeId = (req.body.recipeId || "").trim();
+    const recipeTitle = (req.body.recipeTitle || "").trim();
+    const imageUrl = (req.body.imageUrl || "").trim();
+    const notes = (req.body.notes || "").trim();
+    const mealType = (req.body.mealType || "").trim();
+    const dietType = (req.body.dietType || "").trim();
+
+    if (!recipeId || !recipeTitle) {
+        return res.status(400).send("Recipe id and recipe title are required.");
+    }
+
+    try {
+        const sql = `INSERT INTO favorites (
+                        user_name,
+                        recipe_id,
+                        recipe_title,
+                        image_url,
+                        notes,
+                        meal_type,
+                        diet_type
+                     )
+                     VALUES (?, ?, ?, ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                        recipe_title = VALUES(recipe_title),
+                        image_url = VALUES(image_url),
+                        notes = VALUES(notes),
+                        meal_type = VALUES(meal_type),
+                        diet_type = VALUES(diet_type),
+                        updated_at = CURRENT_TIMESTAMP`;
+
+        await pool.query(sql, [
+            req.session.username,
+            recipeId,
+            recipeTitle,
+            imageUrl || null,
+            notes || null,
+            mealType || null,
+            dietType || null
+        ]);
+
+        res.redirect(`/recipe/${encodeURIComponent(recipeId)}?source=${encodeURIComponent(source)}`);
+    }
+    catch (err) {
+        console.error("Save favorite error:", err);
+        res.status(500).send("Unable to save favorite right now.");
+    }
+});
+
+app.post("/favorites/:recipeId/delete", isAuthenticated, async (req, res) => {
+    const recipeId = req.params.recipeId;
+
+    try {
+        const sql = `DELETE FROM favorites
+                     WHERE user_name = ? AND recipe_id = ?`;
+
+        await pool.query(sql, [req.session.username, recipeId]);
+        res.redirect("/favorites");
+    }
+    catch (err) {
+        console.error("Delete favorite error:", err);
+        res.status(500).send("Unable to remove favorite right now.");
+    }
+});
+
+app.post("/ratings", isAuthenticated, async (req, res) => {
+    const source = normalizeRecipeSource(req.body.source);
+    const recipeId = (req.body.recipeId || "").trim();
+    const ratingValue = Number.parseInt(req.body.ratingValue, 10);
+
+    if (!recipeId || Number.isNaN(ratingValue) || ratingValue < 1 || ratingValue > 5) {
+        return res.status(400).send("Please submit a rating between 1 and 5.");
+    }
+
+    try {
+        const sql = `INSERT INTO ratings (user_name, recipe_id, rating_value)
+                     VALUES (?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                        rating_value = VALUES(rating_value),
+                        updated_at = CURRENT_TIMESTAMP`;
+
+        await pool.query(sql, [req.session.username, recipeId, ratingValue]);
+        res.redirect(`/recipe/${encodeURIComponent(recipeId)}?source=${encodeURIComponent(source)}`);
+    }
+    catch (err) {
+        console.error("Rating error:", err);
+        res.status(500).send("Unable to save rating right now.");
+    }
+});
+
 
 // =====================
 // API ENDPOINTS
@@ -364,6 +506,7 @@ app.get("/api/search/ingredients", async (req, res) => {
             let newRecipe = {
                 ...recipe,
                 source: "Spoonacular",
+                sourceKey: "spoonacular",
                 sourceDetails: "Matches your pantry ingredients and applies cuisine/diet filters.",
                 filtersApplied: true,
                 usedIngredients: usedIngredients,
@@ -499,18 +642,137 @@ function normalizeMealDbRecipe(meal, hasFilters) {
         image: meal.strMealThumb,
         source: "TheMealDB",
         sourceDetails: hasFilters
+        sourceKey: "mealdb",
             ? "Single-ingredient match from TheMealDB. Cuisine and diet filters do not apply."
             : "Single-ingredient match from TheMealDB.",
         filtersApplied: false,
         category: meal.strCategory || null,
         area: meal.strArea || null,
         usedIngredients: [],
+        ingredients: extractMealDbIngredients(meal),
+        mealType: meal.strCategory || "",
+        dietType: "",
         missedIngredients: [],
         usedIngredientCount: null,
         missedIngredientCount: null,
         analyzedInstructions: steps.length > 0 ? [{ steps }] : [],
         instructionsText: instructions
     };
+}
+
+async function fetchRecipeDetails(recipeId, source) {
+    if (source === "mealdb") {
+        const meal = await fetchMealDbRecipeDetails(recipeId);
+
+        if (!meal) {
+            throw new Error("Recipe not found in TheMealDB.");
+        }
+
+        const normalizedMeal = normalizeMealDbRecipe(meal, false);
+        return {
+            id: normalizedMeal.id,
+            title: normalizedMeal.title,
+            image: normalizedMeal.image || "/img/placeholder.jpg",
+            ingredients: normalizedMeal.ingredients || [],
+            instructions: convertInstructionsToText(normalizedMeal.analyzedInstructions, normalizedMeal.instructionsText),
+            category: normalizedMeal.category || "N/A",
+            area: normalizedMeal.area || "N/A",
+            mealType: normalizedMeal.mealType || "",
+            dietType: normalizedMeal.dietType || "",
+            source: normalizedMeal.source
+        };
+    }
+
+    const detailUrl = new URL(`${spoonacularBaseUrl}/${recipeId}/information`);
+    detailUrl.searchParams.set("apiKey", spoonacularApiKey);
+    detailUrl.searchParams.set("includeNutrition", "false");
+
+    const response = await fetch(detailUrl);
+
+    if (!response.ok) {
+        throw new Error(`Spoonacular detail lookup failed for recipe ${recipeId}.`);
+    }
+
+    const recipe = await response.json();
+
+    return {
+        id: recipe.id,
+        title: recipe.title,
+        image: recipe.image || "/img/placeholder.jpg",
+        ingredients: (recipe.extendedIngredients || []).map((ingredient) => ingredient.original),
+        instructions: convertInstructionsToText(recipe.analyzedInstructions, recipe.instructions),
+        category: recipe.dishTypes?.[0] || recipe.category || "N/A",
+        area: recipe.cuisines?.[0] || "N/A",
+        mealType: recipe.dishTypes?.[0] || "",
+        dietType: (recipe.diets || []).join(", "),
+        source: "Spoonacular"
+    };
+}
+
+function convertInstructionsToText(analyzedInstructions, instructionsText = "") {
+    if (Array.isArray(analyzedInstructions) && analyzedInstructions.length > 0) {
+        const steps = analyzedInstructions[0]?.steps || [];
+        if (steps.length > 0) {
+            return steps.map((step) => step.step).filter(Boolean);
+        }
+    }
+
+    if (!instructionsText) {
+        return [];
+    }
+
+    return instructionsText
+        .split(/\r?\n+/)
+        .map((step) => step.trim())
+        .filter(Boolean);
+}
+
+function extractMealDbIngredients(meal) {
+    const ingredients = [];
+
+    for (let index = 1; index <= 20; index += 1) {
+        const ingredient = meal[`strIngredient${index}`]?.trim();
+        const measure = meal[`strMeasure${index}`]?.trim();
+
+        if (!ingredient) {
+            continue;
+        }
+
+        ingredients.push([measure, ingredient].filter(Boolean).join(" ").trim());
+    }
+
+    return ingredients;
+}
+
+async function getAverageRating(recipeId) {
+    const sql = `SELECT ROUND(AVG(rating_value), 1) AS average_rating
+                 FROM ratings
+                 WHERE recipe_id = ?`;
+
+    const [rows] = await pool.query(sql, [recipeId]);
+    return rows[0]?.average_rating ?? null;
+}
+
+async function getUserRating(username, recipeId) {
+    const sql = `SELECT rating_value
+                 FROM ratings
+                 WHERE user_name = ? AND recipe_id = ?`;
+
+    const [rows] = await pool.query(sql, [username, recipeId]);
+    return rows[0]?.rating_value ?? null;
+}
+
+async function getFavorite(username, recipeId) {
+    const sql = `SELECT *
+                 FROM favorites
+                 WHERE user_name = ? AND recipe_id = ?`;
+
+    const [rows] = await pool.query(sql, [username, recipeId]);
+    return rows[0] || null;
+}
+
+function normalizeRecipeSource(source) {
+    return source === "mealdb" ? "mealdb" : "spoonacular";
 }
 
 // TheMealDB cooking instructions can have inconsistent formatting, so clean it up for better display.
