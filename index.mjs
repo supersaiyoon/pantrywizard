@@ -538,11 +538,22 @@ app.get("/dbTest", async (req, res) => {
     }
 });
 
-createUsersTable();
+initializeDatabase()
+    .then(() => {
+        app.listen(port, () => {
+            console.log(`Server listening on port http://localhost:${port}`);
+        });
+    })
+    .catch((err) => {
+        console.error("Database initialization error:", err);
+        process.exit(1);
+    });
 
-app.listen(port, () => {
-    console.log(`Server listening on port http://localhost:${port}`);
-});
+async function initializeDatabase() {
+    await createUsersTable();
+    await createFavoritesTable();
+    await createRatingsTable();
+}
 
 async function createUsersTable() {
     let sql = `CREATE TABLE IF NOT EXISTS users (
@@ -560,6 +571,55 @@ async function createUsersTable() {
     }
     catch (err) {
         console.error("Error creating users table:", err);
+    }
+}
+
+async function createFavoritesTable() {
+    const sql = `CREATE TABLE IF NOT EXISTS favorites (
+                     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                     user_name VARCHAR(50) NOT NULL,
+                     recipe_id VARCHAR(50) NOT NULL,
+                     recipe_title VARCHAR(255) NOT NULL,
+                     image_url VARCHAR(500),
+                     notes TEXT,
+                     meal_type VARCHAR(100),
+                     diet_type VARCHAR(100),
+                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                     PRIMARY KEY (id),
+                     UNIQUE KEY unique_user_recipe (user_name, recipe_id)
+                 )`;
+
+    try {
+        await pool.query(sql);
+        console.log("Favorites table is ready.");
+    }
+    catch (err) {
+        console.error("Error creating favorites table:", err);
+        throw err;
+    }
+}
+
+async function createRatingsTable() {
+    const sql = `CREATE TABLE IF NOT EXISTS ratings (
+                     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                     user_name VARCHAR(50) NOT NULL,
+                     recipe_id VARCHAR(50) NOT NULL,
+                     rating_value TINYINT UNSIGNED NOT NULL,
+                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                     PRIMARY KEY (id),
+                     UNIQUE KEY unique_user_recipe_rating (user_name, recipe_id),
+                     CONSTRAINT chk_rating_value CHECK (rating_value BETWEEN 1 AND 5)
+                 )`;
+
+    try {
+        await pool.query(sql);
+        console.log("Ratings table is ready.");
+    }
+    catch (err) {
+        console.error("Error creating ratings table:", err);
+        throw err;
     }
 }
 
