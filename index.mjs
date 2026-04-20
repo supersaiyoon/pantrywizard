@@ -94,35 +94,18 @@ app.get("/favorites", isAuthenticated, async (req, res) => {
 
 app.get("/recipe/:id", async (req, res) => {
     const recipeId = req.params.id;
+    const source = normalizeRecipeSource(req.query.source);
 
     try {
-        const [avg] = await pool.query(
-            "SELECT ROUND(AVG(rating_value),1) AS avg FROM ratings WHERE recipe_id=?",
-            [recipeId]
-        );
+        const recipe = await fetchRecipeDetails(recipeId, source);
+        const averageRating = await getAverageRating(recipeId);
+        let userRating = null;
+        let favorite = null;
 
-        const [userRating] = await pool.query(
-            "SELECT rating_value FROM ratings WHERE user_name=? AND recipe_id=?",
-            [req.session.username, recipeId]
-        );
-
-        const [favorite] = await pool.query(
-            "SELECT * FROM favorites WHERE user_name=? AND recipe_id=?",
-            [req.session.username, recipeId]
-        );
-
-        res.render("recipe-detail", {
-            recipeId,
-            averageRating: avg[0].avg,
-            userRating: userRating[0]?.rating_value || null,
-            favorite: favorite[0] || null
-        });
-
-    } catch (err) {
-        console.error(err);
-        res.send("Error loading recipe");
-    }
-});
+        if (req.session.username) {
+            userRating = await getUserRating(req.session.username, recipeId);
+            favorite = await getFavorite(req.session.username, recipeId);
+        }
 
         res.render("recipe-detail", {
             recipe,
@@ -153,11 +136,6 @@ app.get("/recipe/:id", async (req, res) => {
             source
         });
     }
-});
-
-    const averageRating = "N/A";
-
-    res.render("recipe-detail", { recipe, averageRating });
 });
 
 app.get("/register", (req, res) => {
@@ -429,79 +407,6 @@ app.post("/ratings", isAuthenticated, async (req, res) => {
 });
 
 // =====================
-// FAVORITES + RATINGS 
-// =====================
-
-app.post("/favorites", isAuthenticated, async (req, res) => {
-    const recipeId = req.body.recipeId;
-    const recipeTitle = req.body.recipeTitle;
-    const imageUrl = req.body.imageUrl;
-    const notes = req.body.notes;
-
-    try {
-        const sql = `
-            INSERT INTO favorites (user_name, recipe_id, recipe_title, image_url, notes)
-            VALUES (?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                notes = VALUES(notes),
-                updated_at = CURRENT_TIMESTAMP
-        `;
-
-        await pool.query(sql, [
-            req.session.username,
-            recipeId,
-            recipeTitle,
-            imageUrl,
-            notes
-        ]);
-
-        res.redirect("/favorites");
-    } catch (err) {
-        console.error(err);
-        res.send("Error saving favorite");
-    }
-});
-
-app.post("/favorites/:id/delete", isAuthenticated, async (req, res) => {
-    try {
-        await pool.query(
-            "DELETE FROM favorites WHERE user_name=? AND recipe_id=?",
-            [req.session.username, req.params.id]
-        );
-
-        res.redirect("/favorites");
-    } catch (err) {
-        console.error(err);
-        res.send("Error deleting favorite");
-    }
-});
-
-app.post("/ratings", isAuthenticated, async (req, res) => {
-    const { recipeId, ratingValue } = req.body;
-
-    try {
-        const sql = `
-            INSERT INTO ratings (user_name, recipe_id, rating_value)
-            VALUES (?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                rating_value = VALUES(rating_value),
-                updated_at = CURRENT_TIMESTAMP
-        `;
-
-        await pool.query(sql, [
-            req.session.username,
-            recipeId,
-            ratingValue
-        ]);
-
-        res.redirect(`/recipe/${recipeId}`);
-    } catch (err) {
-        console.error(err);
-        res.send("Error saving rating");
-    }
-});
-
-// =====================
 // API ENDPOINTS
 // =====================
 
@@ -724,8 +629,8 @@ function normalizeMealDbRecipe(meal, hasFilters) {
         title: meal.strMeal,
         image: meal.strMealThumb,
         source: "TheMealDB",
-        sourceDetails: hasFilters
         sourceKey: "mealdb",
+        sourceDetails: hasFilters
             ? "Single-ingredient match from TheMealDB. Cuisine and diet filters do not apply."
             : "Single-ingredient match from TheMealDB.",
         filtersApplied: false,
