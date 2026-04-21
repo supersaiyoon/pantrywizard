@@ -80,17 +80,65 @@ app.get("/about", (req, res) => {
 
 app.get("/favorites", isAuthenticated, async (req, res) => {
     try {
-        const [favorites] = await pool.query(
-            "SELECT * FROM favorites WHERE user_name=?",
-            [req.session.username]
-        );
+        const sql = `
+            SELECT *
+            FROM favorites
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+        `;
+
+        const [favorites] = await pool.query(sql, [req.session.userId]);
 
         res.render("favorites", { favorites });
-    } catch (err) {
-        console.error(err);
-        res.render("favorites", { favorites: [] });
+    }
+    catch (err) {
+        console.error("Favorites page error:", err);
+        res.status(500).send("Unable to load favorites right now.");
     }
 });
+
+app.post("/favorites/add", isAuthenticated, async (req, res) => {
+    const {
+        recipe_id,
+        recipe_title,
+        image_url,
+        notes,
+        meal_type,
+        diet_type
+    } = req.body;
+
+    try {
+        const sql = `
+            INSERT INTO favorites (
+                user_id,
+                recipe_id,
+                recipe_title,
+                image_url,
+                notes,
+                meal_type,
+                diet_type
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        await pool.query(sql, [
+            req.session.userId,
+            recipe_id,
+            recipe_title,
+            image_url || "",
+            notes || "",
+            meal_type || "",
+            diet_type || ""
+        ]);
+
+        res.redirect("/favorites");
+    }
+    catch (err) {
+        console.error("Add favorite error:", err);
+        res.status(500).send("Unable to save favorite right now.");
+    }
+});
+
 
 app.get("/recipe/:id", async (req, res) => {
     const recipeId = req.params.id;
