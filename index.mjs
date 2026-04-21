@@ -217,7 +217,7 @@ app.post("/favorites/add", isAuthenticated, async (req, res) => {
             normalizedSource
         ]);
 
-        res.redirect("/favorites");
+        res.redirect(`/recipe/${encodeURIComponent(recipe_id)}?source=${encodeURIComponent(normalizedSource)}`);
     }
     catch (err) {
         console.error("Add favorite error:", err);
