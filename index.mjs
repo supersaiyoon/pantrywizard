@@ -33,6 +33,7 @@ const spoonacularApiKey = process.env.SPOONACULAR_API_KEY;
 const theMealDbApiKey = process.env.THEMEALDB_API_KEY || "1";
 const sessionSecret = process.env.SESSION_SECRET;
 const saltRounds = 10;
+const spoonacularCacheTtlHours = 24;
 
 if (!sessionSecret) {
     throw new Error("SESSION_SECRET is required. Add it to your .env file before starting the server.");
@@ -632,6 +633,7 @@ async function initializeDatabase() {
     await createUsersTable();
     await createFavoritesTable();
     await createRatingsTable();
+    await createApiCacheTable();
 }
 
 async function createUsersTable() {
@@ -700,6 +702,96 @@ async function createRatingsTable() {
         console.error("Error creating ratings table:", err);
         throw err;
     }
+}
+
+async function createApiCacheTable() {
+    const sql = `CREATE TABLE IF NOT EXISTS api_cache (
+                     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                     cache_key VARCHAR(255) NOT NULL,
+                     cache_type VARCHAR(50) NOT NULL,
+                     payload_json LONGTEXT NOT NULL,
+                     expires_at DATETIME NOT NULL,
+                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                     PRIMARY KEY (id),
+                     UNIQUE KEY unique_cache_key (cache_key)
+                 )`;
+
+    try {
+        await pool.query(sql);
+        console.log("API cache table is ready.");
+    }
+    catch (err) {
+        console.error("Error creating API cache table:", err);
+        throw err;
+    }
+}
+
+async function getCachedApiResponse(cacheKey) {
+    const sql = `SELECT payload_json, expires_at
+                 FROM api_cache
+                 WHERE cache_key = ?`;
+
+    const [rows] = await pool.query(sql, [cacheKey]);
+
+    if (rows.length === 0) {
+        return null;
+    }
+
+    const cacheRow = rows[0];
+    const expiresAt = new Date(cacheRow.expires_at);
+    const now = new Date();
+
+    if (expiresAt <= now) {
+        return null;
+    }
+
+    return JSON.parse(cacheRow.payload_json);
+}
+
+async function setCachedApiResponse(cacheKey, cacheType, payload, ttlHours) {
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + ttlHours);
+
+    const sql = `INSERT INTO api_cache (cache_key, cache_type, payload_json, expires_at)
+                 VALUES (?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                    cache_type = VALUES(cache_type),
+                    payload_json = VALUES(payload_json),
+                    expires_at = VALUES(expires_at),
+                    updated_at = CURRENT_TIMESTAMP`;
+
+    await pool.query(sql, [
+        cacheKey,
+        cacheType,
+        JSON.stringify(payload),
+        expiresAt
+    ]);
+}
+
+function buildSearchCacheKey(ingredients, cuisine, diet) {
+    const normalizedIngredients = ingredients
+        .split(",")
+        .map((ingredient) => ingredient.trim().toLowerCase())
+        .filter(Boolean)
+        .sort()
+        .join(",");
+
+    const normalizedCuisine = (cuisine || "")
+        .split(",")
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean)
+        .sort()
+        .join(",");
+
+    const normalizedDiet = (diet || "")
+        .split(",")
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean)
+        .sort()
+        .join(",");
+
+    return `spoonacular-search|ingredients=${normalizedIngredients}|cuisine=${normalizedCuisine}|diet=${normalizedDiet}`;
 }
 
 async function fetchMealDbRecipesByIngredient(ingredient, options = {}) {
