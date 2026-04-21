@@ -16,28 +16,53 @@
             </div>
         </section>
 
-        <section class="featured-section">
-            <h2>Featured Recipes</h2>
-            <div class="recipe-grid">
-                <div class="recipe-card">
-                    <img src="/img/placeholder.jpg" alt="Featured recipe">
-                    <h3>Veggie Pasta</h3>
-                    <p>Simple, fresh, and quick to make.</p>
-                </div>
+<section>
+    <h2>Featured Recipes</h2>
 
-                <div class="recipe-card">
-                    <img src="/img/placeholder.jpg" alt="Featured recipe">
-                    <h3>Avocado Salad</h3>
-                    <p>A healthy meal with fresh ingredients.</p>
-                </div>
+    <div class="cards">
+        <% for (const recipe of featuredRecipes) { %>
+            <div class="recipe">
+                <a href="/recipe/<%= recipe.id %>?source=<%= encodeURIComponent(recipe.sourceKey || 'spoonacular') %>">
 
-                <div class="recipe-card">
-                    <img src="/img/placeholder.jpg" alt="Featured recipe">
-                    <h3>Grilled Chicken</h3>
-                    <p>Protein-packed and easy for lunch or dinner.</p>
-                </div>
+                    <span class="source-badge">
+                        <%= recipe.source || "Recipe" %>
+                    </span>
+
+                    <h3><%= recipe.title %></h3>
+
+                    <div class="search-recipe-layout">
+                        <div>
+                            <img
+                                src="<%= recipe.image || '/img/placeholder.jpg' %>"
+                                alt="<%= recipe.title %>"
+                                class="recipe-preview"
+                            >
+                        </div>
+
+                        <div>
+                            <% if (recipe.readyInMinutes != null) { %>
+                                <p><strong>Ready in:</strong> <%= recipe.readyInMinutes %> min</p>
+                            <% } %>
+
+                            <% if (recipe.servings != null) { %>
+                                <p><strong>Servings:</strong> <%= recipe.servings %></p>
+                            <% } %>
+
+                            <% if (recipe.diets && recipe.diets.length > 0) { %>
+                                <p><strong>Diets:</strong> <%= recipe.diets.join(", ") %></p>
+                            <% } %>
+
+                            <% if (recipe.sourceDetails) { %>
+                                <p class="source-details"><%= recipe.sourceDetails %></p>
+                            <% } %>
+                        </div>
+                    </div>
+
+                </a>
             </div>
-        </section>
+        <% } %>
+    </div>
+</section>
     </main>
 
     <%- include('partials/footer') %>

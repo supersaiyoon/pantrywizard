@@ -100,34 +100,25 @@ async function searchRecipes() {
             recipeDiv.className = "recipe";
 
             recipeDiv.innerHTML = `
-                <div class="recipe-header">
-                    <h3>${recipe.title}</h3>
-                    <span class="source-badge">${recipe.source || "Recipe"}</span>
+        <a href="/recipe/${recipe.id}?source=${encodeURIComponent(recipe.sourceKey || "spoonacular")}">
+            <span class="source-badge">${recipe.source || "Recipe"}</span>
+            <h3>${recipe.title}</h3>
+
+            <div class="search-recipe-layout">
+                <div>
+                    <img
+                        src="${recipe.image || '/img/placeholder.jpg'}"
+                        alt="${recipe.title}"
+                        class="recipe-preview"
+                    >
                 </div>
-                <img src="${recipe.image}" alt="${recipe.title}">
-                ${formatRecipeMeta(recipe)}
-                ${formatSourceDetails(recipe)}
-                <p><strong>Instructions:</strong></p>
-                ${formatInstructions(recipe)}
-
-                <a href="/recipe/${recipe.id}?source=${encodeURIComponent(recipe.sourceKey || "spoonacular")}" class="btn btn-secondary">
-                    View Details
-                </a>
-
-                <form method="POST" action="/favorites/add">
-                    <input type="hidden" name="recipe_id" value="${recipe.id}">
-                    <input type="hidden" name="recipe_title" value="${recipe.title}">
-                    <input type="hidden" name="image_url" value="${recipe.image || '/img/placeholder.jpg'}">
-                    <input type="hidden" name="meal_type" value="${recipe.mealType || recipe.category || ''}">
-                    <input type="hidden" name="diet_type" value="${recipe.dietType || ''}">
-                    <input type="hidden" name="source" value="${recipe.sourceKey || 'spoonacular'}">
-
-                    <label for="notes-${recipe.id}">Notes</label>
-                    <textarea name="notes" id="notes-${recipe.id}" rows="3" cols="30" placeholder="Add a note"></textarea>
-
-                    <button type="submit" class="btn btn-primary">Add to Favorites</button>
-                </form>
-            `;
+                <div>
+                    ${formatRecipeMeta(recipe)}
+                    ${formatSourceDetails(recipe)}
+                </div>
+            </div>
+        </a>
+    `;
 
             searchResults.appendChild(recipeDiv);
         }

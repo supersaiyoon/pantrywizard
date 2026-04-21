@@ -71,8 +71,18 @@ const pool = mysql.createPool(config);
 // =====================
 
 // Home page
-app.get("/", (req, res) => {
-    res.render("index");
+app.get("/", async (req, res) => {
+    try {
+        const cacheKey = buildSearchCacheKey("mango", "Asian", "");
+        const cachedResponse = await getCachedApiResponse(cacheKey);
+        const featuredRecipes = (cachedResponse.payload || []).slice(0, 2);
+
+        res.render("index", { featuredRecipes });
+    }
+    catch (err) {
+        console.error("Home page error:", err);
+        res.render("index", { featuredRecipes: [] });
+    }
 });
 
 app.get("/about", (req, res) => {
