@@ -242,13 +242,31 @@ app.get("/recipe/:id", async (req, res) => {
 
     try {
         const recipe = await fetchRecipeDetails(recipeId, source);
-        const averageRating = await getAverageRating(recipeId);
+        let averageRating = null;
         let userRating = null;
         let favorite = null;
 
+        try {
+            averageRating = await getAverageRating(recipeId);
+        }
+        catch (err) {
+            console.error("Average rating lookup error:", err);
+        }
+
         if (req.session.username) {
-            userRating = await getUserRating(req.session.userId, recipeId);
-            favorite = await getFavorite(req.session.userId, recipeId);
+            try {
+                userRating = await getUserRating(req.session.userId, recipeId);
+            }
+            catch (err) {
+                console.error("User rating lookup error:", err);
+            }
+
+            try {
+                favorite = await getFavorite(req.session.userId, recipeId);
+            }
+            catch (err) {
+                console.error("Favorite lookup error:", err);
+            }
         }
 
         res.render("recipe-detail", {
@@ -825,6 +843,10 @@ function buildSearchCacheKey(ingredients, cuisine, diet) {
     return `spoonacular-search|ingredients=${normalizedIngredients}|cuisine=${normalizedCuisine}|diet=${normalizedDiet}`;
 }
 
+function buildDetailCacheKey(recipeId) {
+    return `spoonacular-detail|recipeId=${String(recipeId).trim()}`;
+}
+
 async function fetchMealDbRecipesByIngredient(ingredient, options = {}) {
     const { hasFilters = false } = options;
     const searchUrl = new URL(`${theMealDbBaseUrl}/filter.php`);
@@ -933,6 +955,23 @@ async function fetchRecipeDetails(recipeId, source) {
         };
     }
 
+    const cacheKey = buildDetailCacheKey(recipeId);
+    const cachedResponse = await getCachedApiResponse(cacheKey);
+
+    if (cachedResponse.status === "hit") {
+        console.log("Spoonacular detail cache hit");
+        return cachedResponse.payload;
+    }
+
+    if (cachedResponse.status === "expired") {
+        console.log("Spoonacular detail cache expired");
+    }
+    else {
+        console.log("Spoonacular detail cache miss");
+    }
+
+    console.log("Spoonacular detail live fetch");
+
     const detailUrl = new URL(`${spoonacularBaseUrl}/${recipeId}/information`);
     detailUrl.searchParams.set("apiKey", spoonacularApiKey);
     detailUrl.searchParams.set("includeNutrition", "false");
@@ -944,8 +983,7 @@ async function fetchRecipeDetails(recipeId, source) {
     }
 
     const recipe = await response.json();
-
-    return {
+    const normalizedRecipe = {
         id: recipe.id,
         title: recipe.title,
         image: recipe.image || "/img/placeholder.jpg",
@@ -957,6 +995,15 @@ async function fetchRecipeDetails(recipeId, source) {
         dietType: (recipe.diets || []).join(", "),
         source: "Spoonacular"
     };
+
+    await setCachedApiResponse(
+        cacheKey,
+        "detail",
+        normalizedRecipe,
+        spoonacularCacheTtlHours
+    );
+
+    return normalizedRecipe;
 }
 
 function convertInstructionsToText(analyzedInstructions, instructionsText = "") {
