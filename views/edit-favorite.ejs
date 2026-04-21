@@ -1,0 +1,50 @@
+<%- include('partials/head', { pageTitle: 'Edit Favorite | PantryWizard' }) %>
+
+<body>
+    <%- include('partials/nav') %>
+
+    <main class="body-div page-container">
+        <section class="page-header">
+            <h1>Edit Favorite</h1>
+            <p>Update your saved recipe details.</p>
+        </section>
+
+        <section class="info-section">
+            <h2><%= favorite.recipe_title %></h2>
+
+            <img
+                src="<%= favorite.image_url || '/img/placeholder.jpg' %>"
+                alt="<%= favorite.recipe_title %>"
+                class="detail-image"
+            >
+
+            <form method="POST" action="/favorites/update" class="auth-form">
+                <input type="hidden" name="id" value="<%= favorite.id %>">
+
+                <label for="notes">Notes</label>
+                <textarea name="notes" id="notes" rows="4"><%= favorite.notes || '' %></textarea>
+
+                <label for="meal_type">Meal Type</label>
+                <input
+                    type="text"
+                    name="meal_type"
+                    id="meal_type"
+                    value="<%= favorite.meal_type || '' %>"
+                >
+
+                <label for="diet_type">Diet Type</label>
+                <input
+                    type="text"
+                    name="diet_type"
+                    id="diet_type"
+                    value="<%= favorite.diet_type || '' %>"
+                >
+
+                <button type="submit" class="btn btn-primary">Update Favorite</button>
+            </form>
+        </section>
+    </main>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

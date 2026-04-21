@@ -105,6 +105,66 @@ app.get("/favorites", isAuthenticated, async (req, res) => {
     }
 });
 
+
+// =====================
+// EDIT FAVORITE PAGE
+// =====================
+
+app.get("/favorites/edit/:id", isAuthenticated, async (req, res) => {
+    const favoriteId = req.params.id;
+
+    try {
+        const sql = `
+            SELECT *
+            FROM favorites
+            WHERE id = ? AND user_id = ?
+        `;
+
+        const [rows] = await pool.query(sql, [favoriteId, req.session.userId]);
+
+        if (rows.length === 0) {
+            return res.redirect("/favorites");
+        }
+
+        res.render("edit-favorite", { favorite: rows[0] });
+    }
+    catch (err) {
+        console.error("Edit favorite page error:", err);
+        res.status(500).send("Unable to load favorite for editing.");
+    }
+});
+
+
+// =====================
+// UPDATE FAVORITE
+// =====================
+
+app.post("/favorites/update", isAuthenticated, async (req, res) => {
+    const { id, notes, meal_type, diet_type } = req.body;
+
+    try {
+        const sql = `
+            UPDATE favorites
+            SET notes = ?, meal_type = ?, diet_type = ?
+            WHERE id = ? AND user_id = ?
+        `;
+
+        await pool.query(sql, [
+            notes || "",
+            meal_type || "",
+            diet_type || "",
+            id,
+            req.session.userId
+        ]);
+
+        res.redirect("/favorites");
+    }
+    catch (err) {
+        console.error("Update favorite error:", err);
+        res.status(500).send("Unable to update favorite right now.");
+    }
+});
+
 // =====================
 // ADD FAVORITE (NEW)
 // Inserts recipe into favorites table
@@ -416,6 +476,7 @@ app.post("/ratings", isAuthenticated, async (req, res) => {
                         updated_at = CURRENT_TIMESTAMP`;
 
         await pool.query(sql, [req.session.userId, recipeId, ratingValue]);
+
         res.redirect(`/recipe/${encodeURIComponent(recipeId)}?source=${encodeURIComponent(source)}`);
     }
     catch (err) {
