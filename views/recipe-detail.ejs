@@ -76,20 +76,22 @@
 
                 <section class="info-section">
                     <h2>Save Recipe</h2>
+                    <% if (favorite) { %>
+                        <p>This recipe is already saved in your favorites.</p>
+                    <% } %>
 
                     <form method="POST" action="/favorites/add">
                         <input type="hidden" name="recipe_id" value="<%= recipe.id %>">
                         <input type="hidden" name="recipe_title" value="<%= recipe.title %>">
                         <input type="hidden" name="image_url" value="<%= recipe.image || '/img/placeholder.jpg' %>">
-                        <input type="hidden" name="meal_type" value="<%= recipe.category || '' %>">
-                        <input type="hidden" name="diet_type" value="">
+                        <input type="hidden" name="meal_type" value="<%= recipe.mealType || recipe.category || '' %>">
+                        <input type="hidden" name="diet_type" value="<%= recipe.dietType || '' %>">
                         
                         <label for="notes">Notes</label><br>
-                        <textarea name="notes" id="notes" rows="4" cols="30" placeholder="Add a note for this recipe">
-                        </textarea>
+                        <textarea name="notes" id="notes" rows="4" cols="30" placeholder="Add a note for this recipe"><%= favorite?.notes || '' %></textarea>
                         <br><br>
 
-                        <button type="submit" class="btn btn-primary">Add to Favorites</button>
+                        <button type="submit" class="btn btn-primary"><%= favorite ? 'Update Favorite' : 'Add to Favorites' %></button>
                     </form>
                 </section>
 
