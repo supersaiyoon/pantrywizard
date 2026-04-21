@@ -101,8 +101,8 @@ async function searchRecipes() {
                     <input type="hidden" name="recipe_id" value="${recipe.id}">
                     <input type="hidden" name="recipe_title" value="${recipe.title}">
                     <input type="hidden" name="image_url" value="${recipe.image || '/img/placeholder.jpg'}">
-                    <input type="hidden" name="meal_type" value="${recipe.category || ''}">
-                    <input type="hidden" name="diet_type" value="">
+                    <input type="hidden" name="meal_type" value="${recipe.mealType || recipe.category || ''}">
+                    <input type="hidden" name="diet_type" value="${recipe.dietType || ''}">
 
                     <label for="notes-${recipe.id}">Notes</label>
                     <textarea name="notes" id="notes-${recipe.id}" rows="3" cols="30" placeholder="Add a note"></textarea>

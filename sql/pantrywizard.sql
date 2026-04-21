@@ -29,13 +29,13 @@ CREATE TABLE favorites (
 
 CREATE TABLE ratings (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    user_name VARCHAR(50) NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
     recipe_id VARCHAR(50) NOT NULL,
     rating_value TINYINT UNSIGNED NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    UNIQUE KEY unique_user_recipe_rating (user_name, recipe_id),
+    UNIQUE KEY unique_user_recipe_rating (user_id, recipe_id),
     CONSTRAINT chk_rating_value CHECK (rating_value BETWEEN 1 AND 5)
 );
 
@@ -55,9 +55,9 @@ INSERT INTO favorites (user_name, recipe_id, recipe_title, image_url, notes, mea
 VALUES
 ('testuser', '1001', 'Veggie Pasta', '/img/placeholder.jpg', 'Try with garlic bread', 'Dinner', 'Vegetarian');
 
-INSERT INTO ratings (user_name, recipe_id, rating_value)
+INSERT INTO ratings (user_id, recipe_id, rating_value)
 VALUES
-('testuser', '1001', 5);
+(1, '1001', 5);
 
 INSERT INTO search_preferences (user_name, preferred_meal_type, preferred_diet, favorite_cuisine)
 VALUES
