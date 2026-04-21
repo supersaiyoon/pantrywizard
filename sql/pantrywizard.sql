@@ -14,7 +14,7 @@ CREATE TABLE users (
 
 CREATE TABLE favorites (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    user_name VARCHAR(50) NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
     recipe_id VARCHAR(50) NOT NULL,
     recipe_title VARCHAR(255) NOT NULL,
     image_url VARCHAR(500),
@@ -24,7 +24,7 @@ CREATE TABLE favorites (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    UNIQUE KEY unique_user_recipe (user_name, recipe_id)
+    UNIQUE KEY unique_user_recipe (user_id, recipe_id)
 );
 
 CREATE TABLE ratings (
@@ -41,25 +41,25 @@ CREATE TABLE ratings (
 
 CREATE TABLE search_preferences (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    user_name VARCHAR(50) NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
     preferred_meal_type VARCHAR(100),
     preferred_diet VARCHAR(100),
     favorite_cuisine VARCHAR(100),
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    UNIQUE KEY unique_user_preferences (user_name)
+    UNIQUE KEY unique_user_preferences (user_id)
 );
 
 /* Optional starter rows for testing after you register real users
-INSERT INTO favorites (user_name, recipe_id, recipe_title, image_url, notes, meal_type, diet_type)
+INSERT INTO favorites (user_id, recipe_id, recipe_title, image_url, notes, meal_type, diet_type)
 VALUES
-('testuser', '1001', 'Veggie Pasta', '/img/placeholder.jpg', 'Try with garlic bread', 'Dinner', 'Vegetarian');
+(1, '1001', 'Veggie Pasta', '/img/placeholder.jpg', 'Try with garlic bread', 'Dinner', 'Vegetarian');
 
 INSERT INTO ratings (user_id, recipe_id, rating_value)
 VALUES
 (1, '1001', 5);
 
-INSERT INTO search_preferences (user_name, preferred_meal_type, preferred_diet, favorite_cuisine)
+INSERT INTO search_preferences (user_id, preferred_meal_type, preferred_diet, favorite_cuisine)
 VALUES
-('testuser', 'Dinner', 'Vegetarian', 'Italian');
+(1, 'Dinner', 'Vegetarian', 'Italian');
 */

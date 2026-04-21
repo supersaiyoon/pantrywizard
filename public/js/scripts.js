@@ -9,6 +9,20 @@ window.addEventListener("DOMContentLoaded", () => {
             searchInput.value = savedIngredients;
         }
     }
+
+    const savedCuisines = JSON.parse(localStorage.getItem("lastCuisines") || "[]");
+    const savedDiets = JSON.parse(localStorage.getItem("lastDiets") || "[]");
+
+    const cuisineCheckboxes = document.querySelectorAll("input[name='cuisine']");
+    const dietCheckboxes = document.querySelectorAll("input[name='diet']");
+
+    for (const checkbox of cuisineCheckboxes) {
+        checkbox.checked = savedCuisines.includes(checkbox.value);
+    }
+
+    for (const checkbox of dietCheckboxes) {
+        checkbox.checked = savedDiets.includes(checkbox.value);
+    }
 });
 
 // Ensure elements exist before adding event listeners
@@ -40,6 +54,9 @@ async function searchRecipes() {
     for (let checkbox of dietCheckboxes) {
         diets.push(checkbox.value);
     }
+
+    localStorage.setItem("lastCuisines", JSON.stringify(cuisines));
+    localStorage.setItem("lastDiets", JSON.stringify(diets));
 
     console.log("Searching with ingredients:", ingredients);
     console.log("Selected cuisines:", cuisines);
