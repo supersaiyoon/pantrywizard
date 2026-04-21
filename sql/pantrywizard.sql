@@ -21,6 +21,7 @@ CREATE TABLE favorites (
     notes TEXT,
     meal_type VARCHAR(100),
     diet_type VARCHAR(100),
+    source VARCHAR(20) NOT NULL DEFAULT 'spoonacular',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
@@ -51,9 +52,9 @@ CREATE TABLE search_preferences (
 );
 
 /* Optional starter rows for testing after you register real users
-INSERT INTO favorites (user_id, recipe_id, recipe_title, image_url, notes, meal_type, diet_type)
+INSERT INTO favorites (user_id, recipe_id, recipe_title, image_url, notes, meal_type, diet_type, source)
 VALUES
-(1, '1001', 'Veggie Pasta', '/img/placeholder.jpg', 'Try with garlic bread', 'Dinner', 'Vegetarian');
+(1, '1001', 'Veggie Pasta', '/img/placeholder.jpg', 'Try with garlic bread', 'Dinner', 'Vegetarian', 'spoonacular');
 
 INSERT INTO ratings (user_id, recipe_id, rating_value)
 VALUES

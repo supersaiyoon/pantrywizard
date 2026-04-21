@@ -120,6 +120,7 @@ async function searchRecipes() {
                     <input type="hidden" name="image_url" value="${recipe.image || '/img/placeholder.jpg'}">
                     <input type="hidden" name="meal_type" value="${recipe.mealType || recipe.category || ''}">
                     <input type="hidden" name="diet_type" value="${recipe.dietType || ''}">
+                    <input type="hidden" name="source" value="${recipe.sourceKey || 'spoonacular'}">
 
                     <label for="notes-${recipe.id}">Notes</label>
                     <textarea name="notes" id="notes-${recipe.id}" rows="3" cols="30" placeholder="Add a note"></textarea>

@@ -177,8 +177,11 @@ app.post("/favorites/add", isAuthenticated, async (req, res) => {
         image_url,
         notes,
         meal_type,
-        diet_type
+        diet_type,
+        source
     } = req.body;
+
+    const normalizedSource = normalizeRecipeSource(source);
 
     try {
         const sql = `
@@ -189,15 +192,17 @@ app.post("/favorites/add", isAuthenticated, async (req, res) => {
                 image_url,
                 notes,
                 meal_type,
-                diet_type
+                diet_type,
+                source
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 recipe_title = VALUES(recipe_title),
                 image_url = VALUES(image_url),
                 notes = VALUES(notes),
                 meal_type = VALUES(meal_type),
                 diet_type = VALUES(diet_type),
+                source = VALUES(source),
                 updated_at = CURRENT_TIMESTAMP
         `;
 
@@ -208,7 +213,8 @@ app.post("/favorites/add", isAuthenticated, async (req, res) => {
             image_url || "",
             notes || "",
             meal_type || "",
-            diet_type || ""
+            diet_type || "",
+            normalizedSource
         ]);
 
         res.redirect("/favorites");
@@ -711,6 +717,7 @@ async function createFavoritesTable() {
                      notes TEXT,
                      meal_type VARCHAR(100),
                      diet_type VARCHAR(100),
+                     source VARCHAR(20) NOT NULL DEFAULT 'spoonacular',
                      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                      PRIMARY KEY (id),
@@ -719,12 +726,32 @@ async function createFavoritesTable() {
 
     try {
         await pool.query(sql);
+        await ensureFavoritesSourceColumn();
         console.log("Favorites table is ready.");
     }
     catch (err) {
         console.error("Error creating favorites table:", err);
         throw err;
     }
+}
+
+async function ensureFavoritesSourceColumn() {
+    const sql = `SELECT COLUMN_NAME
+                 FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME = 'favorites'
+                   AND COLUMN_NAME = 'source'`;
+
+    const [rows] = await pool.query(sql);
+
+    if (rows.length > 0) {
+        return;
+    }
+
+    const alterSql = `ALTER TABLE favorites
+                      ADD COLUMN source VARCHAR(20) NOT NULL DEFAULT 'spoonacular'`;
+
+    await pool.query(alterSql);
 }
 
 async function createRatingsTable() {
