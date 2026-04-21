@@ -33,6 +33,7 @@ const spoonacularApiKey = process.env.SPOONACULAR_API_KEY;
 const theMealDbApiKey = process.env.THEMEALDB_API_KEY || "1";
 const sessionSecret = process.env.SESSION_SECRET;
 const saltRounds = 10;
+const spoonacularCacheTtlHours = 24;
 
 if (!sessionSecret) {
     throw new Error("SESSION_SECRET is required. Add it to your .env file before starting the server.");
@@ -539,44 +540,66 @@ app.get("/api/search/ingredients", async (req, res) => {
 
         const cleanedIngredients = cleanedArr.join(",");
         const isSingleIngredientSearch = cleanedArr.length === 1;
+        const cacheKey = buildSearchCacheKey(cleanedIngredients, cuisine, diet);
+        const cachedResponse = await getCachedApiResponse(cacheKey);
+        let results = [];
 
+        if (cachedResponse.status === "hit") {
+            console.log("Spoonacular search cache hit");
+            results = cachedResponse.payload || [];
+        }
+        else {
+            if (cachedResponse.status === "expired") {
+                console.log("Spoonacular search cache expired");
+            }
+            else {
+                console.log("Spoonacular search cache miss");
+            }
 
-        const apiUrl = new URL(`${spoonacularBaseUrl}/complexSearch`);
-        apiUrl.searchParams.set("apiKey", spoonacularApiKey);
-        apiUrl.searchParams.set("includeIngredients", cleanedIngredients);
-        apiUrl.searchParams.set("number", "10");
-        apiUrl.searchParams.set("sort", "max-used-ingredients");
-        apiUrl.searchParams.set("ignorePantry", "true");
-        apiUrl.searchParams.set("fillIngredients", "true");
-        apiUrl.searchParams.set("addRecipeInformation", "true");
-        apiUrl.searchParams.set("addRecipeInstructions", "true");
-        apiUrl.searchParams.set("instructionsRequired", "true");
+            console.log("Spoonacular search live fetch");
 
-        // Optional search criteria
-        if (cuisine) {
-            apiUrl.searchParams.set("cuisine", cuisine);
+            const apiUrl = new URL(`${spoonacularBaseUrl}/complexSearch`);
+            apiUrl.searchParams.set("apiKey", spoonacularApiKey);
+            apiUrl.searchParams.set("includeIngredients", cleanedIngredients);
+            apiUrl.searchParams.set("number", "10");
+            apiUrl.searchParams.set("sort", "max-used-ingredients");
+            apiUrl.searchParams.set("ignorePantry", "true");
+            apiUrl.searchParams.set("fillIngredients", "true");
+            apiUrl.searchParams.set("addRecipeInformation", "true");
+            apiUrl.searchParams.set("addRecipeInstructions", "true");
+            apiUrl.searchParams.set("instructionsRequired", "true");
+
+            if (cuisine) {
+                apiUrl.searchParams.set("cuisine", cuisine);
+            }
+
+            if (diet) {
+                apiUrl.searchParams.set("diet", diet);
+            }
+
+            const response = await fetch(apiUrl);
+
+            const quotaRequest = response.headers.get("X-API-Quota-Request");
+            const quotaLeft = response.headers.get("X-API-Quota-Left");
+
+            console.log("Spoonacular quota request:", quotaRequest);
+            console.log("Spoonacular quota left:", quotaLeft);
+
+            if (!response.ok) {
+                return res.status(response.status).json({error: "Failed to fetch recipes based on ingredients."});
+            }
+
+            const data = await response.json();
+            results = data.results || [];
+
+            await setCachedApiResponse(
+                cacheKey,
+                "search",
+                results,
+                spoonacularCacheTtlHours
+            );
         }
 
-        if (diet) {
-            apiUrl.searchParams.set("diet", diet);
-        }
-
-        const response = await fetch(apiUrl);
-
-        // Max 50 points per day for free tier, so display quota info
-        const quotaRequest = response.headers.get("X-API-Quota-Request");
-        const quotaLeft = response.headers.get("X-API-Quota-Left");
-
-        console.log("Spoonacular quota request:", quotaRequest);
-        console.log("Spoonacular quota left:", quotaLeft);
-
-        if (!response.ok) {
-            return res.status(response.status).json({error: "Failed to fetch recipes based on ingredients."});
-        }
-
-        const data = await response.json();
-
-        const results = data.results || [];
         const recipes = [];
 
         for (let recipe of results) {
@@ -656,6 +679,7 @@ async function initializeDatabase() {
     await createUsersTable();
     await createFavoritesTable();
     await createRatingsTable();
+    await createApiCacheTable();
 }
 
 async function createUsersTable() {
@@ -724,6 +748,109 @@ async function createRatingsTable() {
         console.error("Error creating ratings table:", err);
         throw err;
     }
+}
+
+async function createApiCacheTable() {
+    const sql = `CREATE TABLE IF NOT EXISTS api_cache (
+                     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                     cache_key VARCHAR(255) NOT NULL,
+                     cache_type VARCHAR(50) NOT NULL,
+                     payload_json LONGTEXT NOT NULL,
+                     expires_at DATETIME NOT NULL,
+                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                     PRIMARY KEY (id),
+                     UNIQUE KEY unique_cache_key (cache_key)
+                 )`;
+
+    try {
+        await pool.query(sql);
+        console.log("API cache table is ready.");
+    }
+    catch (err) {
+        console.error("Error creating API cache table:", err);
+        throw err;
+    }
+}
+
+async function getCachedApiResponse(cacheKey) {
+    const sql = `SELECT payload_json, expires_at
+                 FROM api_cache
+                 WHERE cache_key = ?`;
+
+    const [rows] = await pool.query(sql, [cacheKey]);
+
+    if (rows.length === 0) {
+        return {
+            status: "miss",
+            payload: null
+        };
+    }
+
+    const cacheRow = rows[0];
+    const expiresAt = new Date(cacheRow.expires_at);
+    const now = new Date();
+
+    if (expiresAt <= now) {
+        return {
+            status: "expired",
+            payload: null
+        };
+    }
+
+    return {
+        status: "hit",
+        payload: JSON.parse(cacheRow.payload_json)
+    };
+}
+
+async function setCachedApiResponse(cacheKey, cacheType, payload, ttlHours) {
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + ttlHours);
+
+    const sql = `INSERT INTO api_cache (cache_key, cache_type, payload_json, expires_at)
+                 VALUES (?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                    cache_type = VALUES(cache_type),
+                    payload_json = VALUES(payload_json),
+                    expires_at = VALUES(expires_at),
+                    updated_at = CURRENT_TIMESTAMP`;
+
+    await pool.query(sql, [
+        cacheKey,
+        cacheType,
+        JSON.stringify(payload),
+        expiresAt
+    ]);
+}
+
+function buildSearchCacheKey(ingredients, cuisine, diet) {
+    const normalizedIngredients = ingredients
+        .split(",")
+        .map((ingredient) => ingredient.trim().toLowerCase())
+        .filter(Boolean)
+        .sort()
+        .join(",");
+
+    const normalizedCuisine = (cuisine || "")
+        .split(",")
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean)
+        .sort()
+        .join(",");
+
+    const normalizedDiet = (diet || "")
+        .split(",")
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean)
+        .sort()
+        .join(",");
+
+    return `spoonacular-search|ingredients=${normalizedIngredients}|cuisine=${normalizedCuisine}|diet=${normalizedDiet}`;
+}
+
+function buildDetailCacheKey(recipeId) {
+    return `spoonacular-detail|recipeId=${String(recipeId).trim()}`;
 }
 
 async function fetchMealDbRecipesByIngredient(ingredient, options = {}) {
@@ -834,6 +961,23 @@ async function fetchRecipeDetails(recipeId, source) {
         };
     }
 
+    const cacheKey = buildDetailCacheKey(recipeId);
+    const cachedResponse = await getCachedApiResponse(cacheKey);
+
+    if (cachedResponse.status === "hit") {
+        console.log("Spoonacular detail cache hit");
+        return cachedResponse.payload;
+    }
+
+    if (cachedResponse.status === "expired") {
+        console.log("Spoonacular detail cache expired");
+    }
+    else {
+        console.log("Spoonacular detail cache miss");
+    }
+
+    console.log("Spoonacular detail live fetch");
+
     const detailUrl = new URL(`${spoonacularBaseUrl}/${recipeId}/information`);
     detailUrl.searchParams.set("apiKey", spoonacularApiKey);
     detailUrl.searchParams.set("includeNutrition", "false");
@@ -845,8 +989,7 @@ async function fetchRecipeDetails(recipeId, source) {
     }
 
     const recipe = await response.json();
-
-    return {
+    const normalizedRecipe = {
         id: recipe.id,
         title: recipe.title,
         image: recipe.image || "/img/placeholder.jpg",
@@ -858,6 +1001,15 @@ async function fetchRecipeDetails(recipeId, source) {
         dietType: (recipe.diets || []).join(", "),
         source: "Spoonacular"
     };
+
+    await setCachedApiResponse(
+        cacheKey,
+        "detail",
+        normalizedRecipe,
+        spoonacularCacheTtlHours
+    );
+
+    return normalizedRecipe;
 }
 
 function convertInstructionsToText(analyzedInstructions, instructionsText = "") {
