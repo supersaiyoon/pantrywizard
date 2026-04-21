@@ -127,42 +127,14 @@ app.get("/favorites/edit/:id", isAuthenticated, async (req, res) => {
             return res.redirect("/favorites");
         }
 
-        res.render("edit-favorite", { favorite: rows[0] });
+        const favorite = rows[0];
+        const source = normalizeRecipeSource(favorite.source);
+
+        res.redirect(`/recipe/${encodeURIComponent(favorite.recipe_id)}?source=${encodeURIComponent(source)}`);
     }
     catch (err) {
         console.error("Edit favorite page error:", err);
         res.status(500).send("Unable to load favorite for editing.");
-    }
-});
-
-
-// =====================
-// UPDATE FAVORITE
-// =====================
-
-app.post("/favorites/update", isAuthenticated, async (req, res) => {
-    const { id, notes, meal_type, diet_type } = req.body;
-
-    try {
-        const sql = `
-            UPDATE favorites
-            SET notes = ?, meal_type = ?, diet_type = ?
-            WHERE id = ? AND user_id = ?
-        `;
-
-        await pool.query(sql, [
-            notes || "",
-            meal_type || "",
-            diet_type || "",
-            id,
-            req.session.userId
-        ]);
-
-        res.redirect("/favorites");
-    }
-    catch (err) {
-        console.error("Update favorite error:", err);
-        res.status(500).send("Unable to update favorite right now.");
     }
 });
 
