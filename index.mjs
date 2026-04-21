@@ -78,25 +78,6 @@ app.get("/about", (req, res) => {
     res.render("about");
 });
 
-app.get("/favorites", isAuthenticated, async (req, res) => {
-    try {
-        const sql = `
-            SELECT *
-            FROM favorites
-            WHERE user_id = ?
-            ORDER BY created_at DESC
-        `;
-
-        const [favorites] = await pool.query(sql, [req.session.userId]);
-
-        res.render("favorites", { favorites });
-    }
-    catch (err) {
-        console.error("Favorites page error:", err);
-        res.status(500).send("Unable to load favorites right now.");
-    }
-});
-
 
 // =====================
 // FAVORITES PAGE (UPDATED)
@@ -205,8 +186,8 @@ app.get("/recipe/:id", async (req, res) => {
         let favorite = null;
 
         if (req.session.username) {
-            userRating = await getUserRating(req.session.username, recipeId);
-            favorite = await getFavorite(req.session.username, recipeId);
+            userRating = await getUserRating(req.session.userId, recipeId);
+            favorite = await getFavorite(req.session.userId, recipeId);
         }
 
         res.render("recipe-detail", {
@@ -417,71 +398,6 @@ app.get("/search", (req, res) => {
     });
 });
 
-app.post("/favorites", isAuthenticated, async (req, res) => {
-    const source = normalizeRecipeSource(req.body.source);
-    const recipeId = (req.body.recipeId || "").trim();
-    const recipeTitle = (req.body.recipeTitle || "").trim();
-    const imageUrl = (req.body.imageUrl || "").trim();
-    const notes = (req.body.notes || "").trim();
-    const mealType = (req.body.mealType || "").trim();
-    const dietType = (req.body.dietType || "").trim();
-
-    if (!recipeId || !recipeTitle) {
-        return res.status(400).send("Recipe id and recipe title are required.");
-    }
-
-    try {
-        const sql = `INSERT INTO favorites (
-                        user_name,
-                        recipe_id,
-                        recipe_title,
-                        image_url,
-                        notes,
-                        meal_type,
-                        diet_type
-                     )
-                     VALUES (?, ?, ?, ?, ?, ?, ?)
-                     ON DUPLICATE KEY UPDATE
-                        recipe_title = VALUES(recipe_title),
-                        image_url = VALUES(image_url),
-                        notes = VALUES(notes),
-                        meal_type = VALUES(meal_type),
-                        diet_type = VALUES(diet_type),
-                        updated_at = CURRENT_TIMESTAMP`;
-
-        await pool.query(sql, [
-            req.session.username,
-            recipeId,
-            recipeTitle,
-            imageUrl || null,
-            notes || null,
-            mealType || null,
-            dietType || null
-        ]);
-
-        res.redirect(`/recipe/${encodeURIComponent(recipeId)}?source=${encodeURIComponent(source)}`);
-    }
-    catch (err) {
-        console.error("Save favorite error:", err);
-        res.status(500).send("Unable to save favorite right now.");
-    }
-});
-
-app.post("/favorites/:recipeId/delete", isAuthenticated, async (req, res) => {
-    const recipeId = req.params.recipeId;
-
-    try {
-        const sql = `DELETE FROM favorites
-                     WHERE user_name = ? AND recipe_id = ?`;
-
-        await pool.query(sql, [req.session.username, recipeId]);
-        res.redirect("/favorites");
-    }
-    catch (err) {
-        console.error("Delete favorite error:", err);
-        res.status(500).send("Unable to remove favorite right now.");
-    }
-});
 
 app.post("/ratings", isAuthenticated, async (req, res) => {
     const source = normalizeRecipeSource(req.body.source);
@@ -493,13 +409,13 @@ app.post("/ratings", isAuthenticated, async (req, res) => {
     }
 
     try {
-        const sql = `INSERT INTO ratings (user_name, recipe_id, rating_value)
+        const sql = `INSERT INTO ratings (user_id, recipe_id, rating_value)
                      VALUES (?, ?, ?)
                      ON DUPLICATE KEY UPDATE
                         rating_value = VALUES(rating_value),
                         updated_at = CURRENT_TIMESTAMP`;
 
-        await pool.query(sql, [req.session.username, recipeId, ratingValue]);
+        await pool.query(sql, [req.session.userId, recipeId, ratingValue]);
         res.redirect(`/recipe/${encodeURIComponent(recipeId)}?source=${encodeURIComponent(source)}`);
     }
     catch (err) {
@@ -680,7 +596,7 @@ async function createFavoritesTable() {
     const sql = `CREATE TABLE IF NOT EXISTS favorites (
                      id INT UNSIGNED NOT NULL AUTO_INCREMENT,
                      user_id INT UNSIGNED NOT NULL,
-                     recipe_id VARCHAR(100) NOT NULL,
+                     recipe_id VARCHAR(50) NOT NULL,
                      recipe_title VARCHAR(255) NOT NULL,
                      image_url VARCHAR(500),
                      notes TEXT,
@@ -689,10 +605,7 @@ async function createFavoritesTable() {
                      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                      PRIMARY KEY (id),
-                     CONSTRAINT fk_favorites_user
-                         FOREIGN KEY (user_id) REFERENCES users(id)
-                         ON DELETE CASCADE,
-                     UNIQUE KEY unique_user_recipe_favorite (user_id, recipe_id)
+                     UNIQUE KEY unique_user_recipe (user_id, recipe_id)
                  )`;
 
     try {
@@ -708,13 +621,13 @@ async function createFavoritesTable() {
 async function createRatingsTable() {
     const sql = `CREATE TABLE IF NOT EXISTS ratings (
                      id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                     user_name VARCHAR(50) NOT NULL,
+                     user_id INT UNSIGNED NOT NULL,
                      recipe_id VARCHAR(50) NOT NULL,
                      rating_value TINYINT UNSIGNED NOT NULL,
                      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                      PRIMARY KEY (id),
-                     UNIQUE KEY unique_user_recipe_rating (user_name, recipe_id),
+                     UNIQUE KEY unique_user_recipe_rating (user_id, recipe_id),
                      CONSTRAINT chk_rating_value CHECK (rating_value BETWEEN 1 AND 5)
                  )`;
 
@@ -906,21 +819,21 @@ async function getAverageRating(recipeId) {
     return rows[0]?.average_rating ?? null;
 }
 
-async function getUserRating(username, recipeId) {
+async function getUserRating(userId, recipeId) {
     const sql = `SELECT rating_value
                  FROM ratings
-                 WHERE user_name = ? AND recipe_id = ?`;
+                 WHERE user_id = ? AND recipe_id = ?`;
 
-    const [rows] = await pool.query(sql, [username, recipeId]);
+    const [rows] = await pool.query(sql, [userId, recipeId]);
     return rows[0]?.rating_value ?? null;
 }
 
-async function getFavorite(username, recipeId) {
+async function getFavorite(userId, recipeId) {
     const sql = `SELECT *
                  FROM favorites
-                 WHERE user_name = ? AND recipe_id = ?`;
+                 WHERE user_id = ? AND recipe_id = ?`;
 
-    const [rows] = await pool.query(sql, [username, recipeId]);
+    const [rows] = await pool.query(sql, [userId, recipeId]);
     return rows[0] || null;
 }
 
