@@ -19,7 +19,7 @@
                         <p><strong>Diet:</strong> <%= recipe.diet_type || 'N/A' %></p>
                         <p><strong>Notes:</strong> <%= recipe.notes || 'No notes yet.' %></p>
 
-                        <a href="/favorites/edit/<%= recipe.id %>" class="btn btn-primary">Edit</a>
+                        <a href="/recipe/<%= recipe.recipe_id %>?source=<%= recipe.source || 'spoonacular' %>" class="btn btn-primary">View Details</a>
                         <!-- REMOVE BUTTON -->
                         <form method="POST" action="/favorites/delete">
                             <input type="hidden" name="recipe_id" value="<%= recipe.recipe_id %>">
