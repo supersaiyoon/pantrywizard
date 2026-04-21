@@ -679,8 +679,8 @@ async function createUsersTable() {
 async function createFavoritesTable() {
     const sql = `CREATE TABLE IF NOT EXISTS favorites (
                      id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                     user_name VARCHAR(50) NOT NULL,
-                     recipe_id VARCHAR(50) NOT NULL,
+                     user_id INT UNSIGNED NOT NULL,
+                     recipe_id VARCHAR(100) NOT NULL,
                      recipe_title VARCHAR(255) NOT NULL,
                      image_url VARCHAR(500),
                      notes TEXT,
@@ -689,7 +689,10 @@ async function createFavoritesTable() {
                      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                      PRIMARY KEY (id),
-                     UNIQUE KEY unique_user_recipe (user_name, recipe_id)
+                     CONSTRAINT fk_favorites_user
+                         FOREIGN KEY (user_id) REFERENCES users(id)
+                         ON DELETE CASCADE,
+                     UNIQUE KEY unique_user_recipe_favorite (user_id, recipe_id)
                  )`;
 
     try {
