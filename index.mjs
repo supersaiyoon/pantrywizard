@@ -97,6 +97,37 @@ app.get("/favorites", isAuthenticated, async (req, res) => {
     }
 });
 
+
+// =====================
+// FAVORITES PAGE (UPDATED)
+// Loads favorites from database instead of static render
+// =====================
+
+app.get("/favorites", isAuthenticated, async (req, res) => {
+    try {
+        // Query favorites for current logged-in user
+        const sql = `
+            SELECT *
+            FROM favorites
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+        `;
+
+        const [favorites] = await pool.query(sql, [req.session.userId]);
+
+        // Pass favorites data into EJS page
+        res.render("favorites", { favorites });
+    }
+    catch (err) {
+        console.error("Favorites page error:", err);
+        res.status(500).send("Unable to load favorites right now.");
+    }
+});
+
+// =====================
+// ADD FAVORITE (NEW)
+// Inserts recipe into favorites table
+// =====================
 app.post("/favorites/add", isAuthenticated, async (req, res) => {
     const {
         recipe_id,
@@ -121,6 +152,7 @@ app.post("/favorites/add", isAuthenticated, async (req, res) => {
             VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
 
+        // Insert favorite tied to logged-in user
         await pool.query(sql, [
             req.session.userId,
             recipe_id,
@@ -139,6 +171,28 @@ app.post("/favorites/add", isAuthenticated, async (req, res) => {
     }
 });
 
+// =====================
+// DELETE FAVORITE (NEW)
+// Removes recipe from favorites
+// =====================
+app.post("/favorites/delete", isAuthenticated, async (req, res) => {
+    const { recipe_id } = req.body;
+
+    try {
+        const sql = `
+            DELETE FROM favorites
+            WHERE user_id = ? AND recipe_id = ?
+        `;
+
+        await pool.query(sql, [req.session.userId, recipe_id]);
+
+        res.redirect("/favorites");
+    }
+    catch (err) {
+        console.error("Delete favorite error:", err);
+        res.status(500).send("Unable to delete favorite right now.");
+    }
+});
 
 app.get("/recipe/:id", async (req, res) => {
     const recipeId = req.params.id;
