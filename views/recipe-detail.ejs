@@ -53,6 +53,28 @@
 
 
                 <section class="info-section">
+                    <h2>Rate Recipe</h2>
+
+                    <form method="POST" action="/ratings">
+                        <input type="hidden" name="recipeId" value="<%= recipe.id %>">
+                        <input type="hidden" name="source" value="<%= source %>">
+
+                        <label for="ratingValue">Your Rating</label>
+                        <select name="ratingValue" id="ratingValue" required>
+                            <option value="">Select a rating</option>
+            		    <option value="1" <%= userRating === 1 ? 'selected' : '' %>>1</option>
+                            <option value="2" <%= userRating === 2 ? 'selected' : '' %>>2</option>
+                            <option value="3" <%= userRating === 3 ? 'selected' : '' %>>3</option>
+                            <option value="4" <%= userRating === 4 ? 'selected' : '' %>>4</option>
+                            <option value="5" <%= userRating === 5 ? 'selected' : '' %>>5</option>
+                        </select>
+
+                        <button type="submit" class="btn btn-primary">Save Rating</button>
+                    </form>
+                </section>
+
+
+                <section class="info-section">
                     <h2>Save Recipe</h2>
 
                     <form method="POST" action="/favorites/add">
