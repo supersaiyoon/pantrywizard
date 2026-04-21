@@ -27,10 +27,9 @@ async function searchRecipes() {
     const ingredients = searchInput.value.trim();
     localStorage.setItem("lastIngredients", ingredients);
 
-    // Get selected cuisines and diets from checkboxes AFTER user clicks search
     const cuisineCheckboxes = document.querySelectorAll("input[name='cuisine']:checked");
     const dietCheckboxes = document.querySelectorAll("input[name='diet']:checked");
-    
+
     const cuisines = [];
     const diets = [];
 
@@ -54,10 +53,8 @@ async function searchRecipes() {
     searchResults.innerHTML = "<p>Searching for recipes...</p>";
 
     try {
-        // Build query parameters for API request
-        const params = new URLSearchParams({ingredients});
+        const params = new URLSearchParams({ ingredients });
 
-        // Optional search criteria
         if (cuisines.length > 0) {
             params.set("cuisine", cuisines.join(","));
         }
@@ -85,11 +82,6 @@ async function searchRecipes() {
             const recipeDiv = document.createElement("div");
             recipeDiv.className = "recipe";
 
-
-            // =====================
-            // FAVORITES FORM (NEW)
-            // Adds "Add to Favorites" button inside each search result
-            // =====================
             recipeDiv.innerHTML = `
                 <div class="recipe-header">
                     <h3>${recipe.title}</h3>
@@ -100,6 +92,10 @@ async function searchRecipes() {
                 ${formatSourceDetails(recipe)}
                 <p><strong>Instructions:</strong></p>
                 ${formatInstructions(recipe)}
+
+                <a href="/recipe/${recipe.id}?source=${encodeURIComponent(recipe.sourceKey || "spoonacular")}" class="btn btn-secondary">
+                    View Details
+                </a>
 
                 <form method="POST" action="/favorites/add">
                     <input type="hidden" name="recipe_id" value="${recipe.id}">
@@ -114,6 +110,7 @@ async function searchRecipes() {
                     <button type="submit" class="btn btn-primary">Add to Favorites</button>
                 </form>
             `;
+
             searchResults.appendChild(recipeDiv);
         }
     }
