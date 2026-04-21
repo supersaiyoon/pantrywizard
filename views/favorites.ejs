@@ -18,6 +18,12 @@
                         <p><strong>Meal Type:</strong> <%= recipe.meal_type || 'N/A' %></p>
                         <p><strong>Diet:</strong> <%= recipe.diet_type || 'N/A' %></p>
                         <p><strong>Notes:</strong> <%= recipe.notes || 'No notes yet.' %></p>
+
+                        <!-- REMOVE BUTTON -->
+                        <form method="POST" action="/favorites/delete">
+                            <input type="hidden" name="recipe_id" value="<%= recipe.recipe_id %>">
+                            <button type="submit" class="btn btn-secondary">Remove</button>
+                        </form>
                     </div>
                 <% }) %>
             </div>
