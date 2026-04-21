@@ -68,27 +68,32 @@ footer{
   padding: 12px;
 }
 
-.recipe {
+/* .recipe {
   border: 1px solid #d7d7cc;
   border-radius: 12px;
   padding: 16px;
   margin: 16px 0;
   background-color: #faf9f5;
-}
-
+} */
+/* 
 .recipe img {
   width: 100%;
   max-width: 320px;
   border-radius: 10px;
   display: block;
   margin-bottom: 12px;
-}
+} */
 
 .recipe-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+}
+
+.recipe-header h3 {
+  margin: 0;
+  flex: 1;
 }
 
 .source-badge {
@@ -199,6 +204,15 @@ footer{
   margin-bottom: 32px;
 }
 
+/* .recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+} */
+
+
+/*----updated recipe card--*/
+
 .recipe-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -216,7 +230,109 @@ footer{
   width: 100%;
   border-radius: 10px;
   margin-bottom: 12px;
+  display: block;
 }
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+  gap: 8px;
+}
+
+.recipe {
+  border: 1px solid #d7d7cc;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0;
+  background-color: #faf9f5;
+}
+
+.search-recipe-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.recipe-preview {
+  width: 200px;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+
+.recipe a {
+  text-decoration: none;
+  color: black;
+  display: block;
+}
+
+.recipe p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+/*-------------*/
+/*---recipe details-----*/
+
+#recipe-detail-h1{
+  margin: 0;
+}
+
+hr{
+  height: 1px;
+  background-color: black;
+  border: none;
+}
+
+.detail-side .info-section {
+  background-color: #faf9f5;
+  border: 1px solid #d7d7cc;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.info-section h2 {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+.detail-main .info-section {
+  margin-bottom: 20px;
+}
+
+.detail-side .info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* tighten text spacing */
+.detail-side .info-section p {
+  margin: 4px 0;
+}
+
+/* make forms clean + stacked */
+.detail-side form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* inputs look consistent */
+.detail-side select,
+.detail-side textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  border: 1px solid #cfcfc2;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+/* labels stand out slightly */
+.detail-side label {
+  font-weight: 600;
+}
+/*-------------*/
 
 .search-container {
   display: flex;
@@ -240,6 +356,10 @@ footer{
 .filter-option {
   display: block;
   margin-bottom: 8px;
+}
+.filter-options {
+  column-count: 2;
+  column-gap: 20px;
 }
 
 .search-results {
