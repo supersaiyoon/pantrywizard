@@ -191,9 +191,15 @@ app.post("/favorites/add", isAuthenticated, async (req, res) => {
                 diet_type
             )
             VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                recipe_title = VALUES(recipe_title),
+                image_url = VALUES(image_url),
+                notes = VALUES(notes),
+                meal_type = VALUES(meal_type),
+                diet_type = VALUES(diet_type),
+                updated_at = CURRENT_TIMESTAMP
         `;
 
-        // Insert favorite tied to logged-in user
         await pool.query(sql, [
             req.session.userId,
             recipe_id,
