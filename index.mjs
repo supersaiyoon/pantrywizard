@@ -241,13 +241,31 @@ app.get("/recipe/:id", async (req, res) => {
 
     try {
         const recipe = await fetchRecipeDetails(recipeId, source);
-        const averageRating = await getAverageRating(recipeId);
+        let averageRating = null;
         let userRating = null;
         let favorite = null;
 
+        try {
+            averageRating = await getAverageRating(recipeId);
+        }
+        catch (err) {
+            console.error("Average rating lookup error:", err);
+        }
+
         if (req.session.username) {
-            userRating = await getUserRating(req.session.userId, recipeId);
-            favorite = await getFavorite(req.session.userId, recipeId);
+            try {
+                userRating = await getUserRating(req.session.userId, recipeId);
+            }
+            catch (err) {
+                console.error("User rating lookup error:", err);
+            }
+
+            try {
+                favorite = await getFavorite(req.session.userId, recipeId);
+            }
+            catch (err) {
+                console.error("Favorite lookup error:", err);
+            }
         }
 
         res.render("recipe-detail", {
