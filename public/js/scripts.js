@@ -84,6 +84,12 @@ async function searchRecipes() {
         for (const recipe of data) {
             const recipeDiv = document.createElement("div");
             recipeDiv.className = "recipe";
+
+
+            // =====================
+            // FAVORITES FORM (NEW)
+            // Adds "Add to Favorites" button inside each search result
+            // =====================
             recipeDiv.innerHTML = `
                 <div class="recipe-header">
                     <h3>${recipe.title}</h3>
@@ -94,7 +100,19 @@ async function searchRecipes() {
                 ${formatSourceDetails(recipe)}
                 <p><strong>Instructions:</strong></p>
                 ${formatInstructions(recipe)}
-                <a href="/recipe/${recipe.id}">View Details</a>
+
+                <form method="POST" action="/favorites/add">
+                    <input type="hidden" name="recipe_id" value="${recipe.id}">
+                    <input type="hidden" name="recipe_title" value="${recipe.title}">
+                    <input type="hidden" name="image_url" value="${recipe.image || '/img/placeholder.jpg'}">
+                    <input type="hidden" name="meal_type" value="${recipe.category || ''}">
+                    <input type="hidden" name="diet_type" value="">
+
+                    <label for="notes-${recipe.id}">Notes</label>
+                    <textarea name="notes" id="notes-${recipe.id}" rows="3" cols="30" placeholder="Add a note"></textarea>
+
+                    <button type="submit" class="btn btn-primary">Add to Favorites</button>
+                </form>
             `;
             searchResults.appendChild(recipeDiv);
         }
