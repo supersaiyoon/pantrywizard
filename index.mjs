@@ -22,6 +22,7 @@ import config from "./config.mjs";
 
 app.set("view engine", "ejs");
 app.use(express.static("public"));
+app.set("trust proxy", 1);
 
 
 // =====================
@@ -34,6 +35,7 @@ const theMealDbApiKey = process.env.THEMEALDB_API_KEY || "1";
 const sessionSecret = process.env.SESSION_SECRET;
 const saltRounds = 10;
 const spoonacularCacheTtlHours = 24;
+const isProduction = process.env.NODE_ENV === "production";
 
 if (!sessionSecret) {
     throw new Error("SESSION_SECRET is required. Add it to your .env file before starting the server.");
@@ -42,16 +44,95 @@ if (!sessionSecret) {
 // API base URLs
 const spoonacularBaseUrl = "https://api.spoonacular.com/recipes";
 const theMealDbBaseUrl = `https://www.themealdb.com/api/json/v1/${theMealDbApiKey}`;
+const pool = mysql.createPool(config);
 
 //for Express to get values using POST method
 app.use(express.urlencoded({ extended: true }));
+
+class MySqlSessionStore extends session.Store {
+    constructor(databasePool) {
+        super();
+        this.pool = databasePool;
+    }
+
+    async get(sid, callback) {
+        try {
+            const sql = `SELECT session_data
+                         FROM user_sessions
+                         WHERE session_id = ?
+                           AND expires_at > UTC_TIMESTAMP()`;
+            const [rows] = await this.pool.query(sql, [sid]);
+
+            if (rows.length === 0) {
+                return callback(null, null);
+            }
+
+            callback(null, JSON.parse(rows[0].session_data));
+        }
+        catch (err) {
+            callback(err);
+        }
+    }
+
+    async set(sid, sessionData, callback = () => {}) {
+        try {
+            const expiresAt = getSessionExpiryDate(sessionData);
+            const sql = `INSERT INTO user_sessions (session_id, session_data, expires_at)
+                         VALUES (?, ?, ?)
+                         ON DUPLICATE KEY UPDATE
+                            session_data = VALUES(session_data),
+                            expires_at = VALUES(expires_at),
+                            updated_at = CURRENT_TIMESTAMP`;
+
+            await this.pool.query(sql, [
+                sid,
+                JSON.stringify(sessionData),
+                expiresAt
+            ]);
+
+            callback(null);
+        }
+        catch (err) {
+            callback(err);
+        }
+    }
+
+    async destroy(sid, callback = () => {}) {
+        try {
+            await this.pool.query("DELETE FROM user_sessions WHERE session_id = ?", [sid]);
+            callback(null);
+        }
+        catch (err) {
+            callback(err);
+        }
+    }
+
+    async touch(sid, sessionData, callback = () => {}) {
+        try {
+            const expiresAt = getSessionExpiryDate(sessionData);
+            await this.pool.query(
+                `UPDATE user_sessions
+                 SET expires_at = ?, updated_at = CURRENT_TIMESTAMP
+                 WHERE session_id = ?`,
+                [expiresAt, sid]
+            );
+            callback(null);
+        }
+        catch (err) {
+            callback(err);
+        }
+    }
+}
+
 app.use(session({
     secret: sessionSecret,
+    store: new MySqlSessionStore(pool),
     resave: false,
     saveUninitialized: false,
     cookie: {
         httpOnly: true,
         sameSite: "lax",
+        secure: isProduction,
         maxAge: 1000 * 60 * 60 * 24
     }
 }));
@@ -61,10 +142,6 @@ app.use((req, res, next) => {
     res.locals.isAuthenticated = Boolean(req.session.userId);
     next();
 });
-
-//setting up database connection pool
-const pool = mysql.createPool(config);
-
 
 // =====================
 // ROUTES
@@ -673,6 +750,8 @@ async function initializeDatabase() {
     await createFavoritesTable();
     await createRatingsTable();
     await createApiCacheTable();
+    await createSessionsTable();
+    await deleteExpiredSessions();
 }
 
 async function createUsersTable() {
@@ -784,6 +863,36 @@ async function createApiCacheTable() {
     catch (err) {
         console.error("Error creating API cache table:", err);
         throw err;
+    }
+}
+
+async function createSessionsTable() {
+    const sql = `CREATE TABLE IF NOT EXISTS user_sessions (
+                     session_id VARCHAR(128) NOT NULL,
+                     session_data LONGTEXT NOT NULL,
+                     expires_at DATETIME NOT NULL,
+                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                     PRIMARY KEY (session_id),
+                     KEY idx_user_sessions_expires_at (expires_at)
+                 )`;
+
+    try {
+        await pool.query(sql);
+        console.log("Sessions table is ready.");
+    }
+    catch (err) {
+        console.error("Error creating sessions table:", err);
+        throw err;
+    }
+}
+
+async function deleteExpiredSessions() {
+    try {
+        await pool.query("DELETE FROM user_sessions WHERE expires_at <= UTC_TIMESTAMP()");
+    }
+    catch (err) {
+        console.error("Error deleting expired sessions:", err);
     }
 }
 
@@ -1059,6 +1168,11 @@ function extractMealDbIngredients(meal) {
     }
 
     return ingredients;
+}
+
+function getSessionExpiryDate(sessionData) {
+    const maxAge = sessionData?.cookie?.maxAge ?? 1000 * 60 * 60 * 24;
+    return new Date(Date.now() + maxAge);
 }
 
 async function getAverageRating(recipeId) {
