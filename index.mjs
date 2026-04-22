@@ -199,7 +199,7 @@ app.post("/favorites/add", isAuthenticated, async (req, res) => {
             normalizedSource
         ]);
 
-        res.redirect(`/recipe/${encodeURIComponent(recipe_id)}?source=${encodeURIComponent(normalizedSource)}`);
+        res.redirect(`/recipe/${encodeURIComponent(recipe_id)}?source=${encodeURIComponent(normalizedSource)}&saved=notes`);
     }
     catch (err) {
         console.error("Add favorite error:", err);
@@ -233,6 +233,9 @@ app.post("/favorites/delete", isAuthenticated, async (req, res) => {
 app.get("/recipe/:id", async (req, res) => {
     const recipeId = req.params.id;
     const source = normalizeRecipeSource(req.query.source);
+    const saveStatus = req.query.saved === "rating" || req.query.saved === "notes"
+        ? req.query.saved
+        : "";
 
     try {
         const recipe = await fetchRecipeDetails(recipeId, source);
@@ -268,7 +271,8 @@ app.get("/recipe/:id", async (req, res) => {
             averageRating,
             userRating,
             favorite,
-            source
+            source,
+            saveStatus
         });
     }
     catch (err) {
@@ -289,7 +293,8 @@ app.get("/recipe/:id", async (req, res) => {
             averageRating: null,
             userRating: null,
             favorite: null,
-            source
+            source,
+            saveStatus: ""
         });
     }
 });
@@ -490,7 +495,7 @@ app.post("/ratings", isAuthenticated, async (req, res) => {
 
         await pool.query(sql, [req.session.userId, recipeId, ratingValue]);
 
-        res.redirect(`/recipe/${encodeURIComponent(recipeId)}?source=${encodeURIComponent(source)}`);
+        res.redirect(`/recipe/${encodeURIComponent(recipeId)}?source=${encodeURIComponent(source)}&saved=rating`);
     }
     catch (err) {
         console.error("Rating error:", err);

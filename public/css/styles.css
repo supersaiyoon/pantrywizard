@@ -283,6 +283,16 @@ footer{
   margin: 0;
 }
 
+.save-feedback {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  background-color: #eaf6ea;
+  border: 1px solid #9dc79d;
+  border-radius: 8px;
+  color: #1f5f2b;
+  font-weight: 600;
+}
+
 hr{
   height: 1px;
   background-color: black;
