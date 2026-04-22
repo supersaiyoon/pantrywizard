@@ -6,6 +6,9 @@ body{
   font-optical-sizing: auto;
   font-weight: 400;  /* 300 to 900 */
   font-style: normal;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 #nav{
   display: flex;
@@ -66,6 +69,8 @@ footer{
   text-align: center;
   background-color: #e5e5dc;
   bottom: auto;
+  margin-top: 32px;
+  padding: 20px 16px;
 }
 /* ---------------------- */
 /* --------- General body div --------- */
@@ -160,6 +165,9 @@ footer{
   max-width: 1100px;
   margin: 0 auto;
   padding: 24px;
+  width: 100%;
+  box-sizing: border-box;
+  flex: 1;
 }
 
 .site-header {
@@ -191,6 +199,7 @@ footer{
   border-radius: 8px;
   text-decoration: none;
   font-weight: 600;
+  font: inherit;
 }
 
 .btn-primary {
@@ -198,9 +207,17 @@ footer{
   color: white;
 }
 
+.btn-primary:hover {
+  background-color: #c9512b;
+}
+
 .btn-secondary {
   background-color: #47ab8d;
   color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #36856d;
 }
 
 .featured-section,
