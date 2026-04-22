@@ -1,8 +1,11 @@
-
 /* --------- Nav --------- */
 body{
   margin: 0%;
   border:8px;
+  font-family: "Figtree", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;  /* 300 to 900 */
+  font-style: normal;
 }
 #nav{
   display: flex;
@@ -23,8 +26,10 @@ body{
 }
 
 .logo{
-  font-size: 32px;
-  font-weight: bold;
+  font-size: 60px;
+  font-family: "Passion One", sans-serif;
+  font-weight: 400;
+  font-style: normal;
 }
 .nav-links {
   display: flex;
