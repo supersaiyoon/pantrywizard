@@ -14,17 +14,22 @@
                 <% favorites.forEach(recipe => { %>
                     <div class="recipe-card">
                         <img src="<%= recipe.image_url || '/img/placeholder.jpg' %>" alt="<%= recipe.recipe_title %>">
-                        <h3><%= recipe.recipe_title %></h3>
-                        <p><strong>Meal Type:</strong> <%= recipe.meal_type || 'N/A' %></p>
-                        <p><strong>Diet:</strong> <%= recipe.diet_type || 'N/A' %></p>
-                        <p><strong>Notes:</strong> <%= recipe.notes || 'No notes yet.' %></p>
+                        <div class="recipe-card-content">
+                            <h3><%= recipe.recipe_title %></h3>
+                            <div class="recipe-card-meta">
+                                <p><strong>Meal Type:</strong> <%= recipe.meal_type || 'N/A' %></p>
+                                <p><strong>Diet:</strong> <%= recipe.diet_type || 'N/A' %></p>
+                                <p><strong>Notes:</strong> <%= recipe.notes || 'No notes yet.' %></p>
+                            </div>
+                        </div>
 
-                        <a href="/recipe/<%= recipe.recipe_id %>?source=<%= recipe.source || 'spoonacular' %>" class="btn btn-primary">View Details</a>
-                        <!-- REMOVE BUTTON -->
-                        <form method="POST" action="/favorites/delete">
-                            <input type="hidden" name="recipe_id" value="<%= recipe.recipe_id %>">
-                            <button type="submit" class="btn btn-secondary">Remove</button>
-                        </form>
+                        <div class="recipe-card-actions">
+                            <a href="/recipe/<%= recipe.recipe_id %>?source=<%= recipe.source || 'spoonacular' %>" class="btn btn-primary">View Details</a>
+                            <form method="POST" action="/favorites/delete">
+                                <input type="hidden" name="recipe_id" value="<%= recipe.recipe_id %>">
+                                <button type="submit" class="btn btn-secondary">Remove</button>
+                            </form>
+                        </div>
                     </div>
                 <% }) %>
             </div>
